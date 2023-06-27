@@ -12,6 +12,11 @@ locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 entry_dia = None
 entry_hora = None
 entry_quantidade_horas = None
+entry_valor_60 = None
+entry_valor_80 = None
+entry_valor_100 = None
+entry_valor_bip = None
+edit_mode = False  # Variável de controle para o modo de edição
 
 def mostrar_calendario():
     hoje = date.today()
@@ -59,19 +64,19 @@ def mostrar_calendario():
         for day_num, day in enumerate(week):
             if week_num == 0 and day_num < dia_semana_primeiro_dia:
                 # Dias do mês anterior
-                label = tk.Label(calendar_frame, text=dia_mes_anterior, padx=10, pady=5, font=('Arial', 35))
+                label = tk.Label(calendar_frame, text=dia_mes_anterior, padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_mes_anterior += 1
             elif day == 0:
                 # Dias do próximo mês
-                label = tk.Label(calendar_frame, text=dia_proximo_mes, padx=10, pady=5, font=('Arial', 35))
+                label = tk.Label(calendar_frame, text=dia_proximo_mes, padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_proximo_mes += 1
             elif day > num_dias_mes_atual:
                 # Dias adicionais do próximo mês
-                label = tk.Label(calendar_frame, text=dia_proximo_mes, padx=10, pady=5, font=('Arial', 35))
+                label = tk.Label(calendar_frame, text=dia_proximo_mes, padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_proximo_mes += 1
             else:
                 # Dias do mês atual
-                label = tk.Label(calendar_frame, text=day, padx=10, pady=5, font=('Arial', 35))
+                label = tk.Label(calendar_frame, text=day, padx=10, pady=5, font=('Arial', 35), relief='raised')
             label.grid(row=week_num+1, column=day_num, sticky='w')
     
 #Tela
@@ -138,6 +143,19 @@ def inserir_dados():
     dia = entry_dia.get()
     quantidade_horas = entry_quantidade_horas.get()
     
+    # Verificar se os campos estão preenchidos
+    if not dia:
+        mensagem_label.config(text='Por favor, preencha um dia!')
+        return
+    
+    if not quantidade_horas:
+        mensagem_label.config(text='Por favor, preencha a quantidade de horas!')
+        return    
+    
+    if quantidade_horas == '0':
+        mensagem_label.config(text='Por favor, preencha uma quantidade de horas valida!')
+        return         
+    
     dia_sqlite = converter_data(dia)
     
     conn = sqlite3.connect('horas.db')
@@ -149,9 +167,8 @@ def inserir_dados():
     # Exibir mensagem de sucesso na interface
     mensagem_label.config(text='Horas inseridas com sucesso!')
     
-
 def abrir_config_horas():
-    global entry_dia, entry_quantidade_horas, mensagem_label
+    global entry_dia, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label
     
     #Ocultar janela atual
     app.withdraw()
@@ -162,17 +179,20 @@ def abrir_config_horas():
     config_window.geometry('1200x700')
     
     # Criar os campos e botão na janela de configuração de horas
-    label_dia = tk.Label(config_window, text='Dia:')
-    label_dia.grid(row=0, column=0, padx=10, pady=10)
+    label_titulo1 = tk.Label(config_window, text='Adicionar horas extras', font=('Arial', 16, 'bold'))
+    label_titulo1.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
     
-    entry_dia = tk.Entry(config_window)
-    entry_dia.grid(row=0, column=1, padx=10, pady=10)
+    label_dia = tk.Label(config_window, text='Dia:')
+    label_dia.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+    
+    entry_dia = tk.Entry(config_window, width=5)
+    entry_dia.grid(row=1, column=1, padx=10, pady=10, sticky='w')
     
     label_quantidade_horas = tk.Label(config_window, text='Quantidade de Horas:')
-    label_quantidade_horas.grid(row=2, column=0, padx=10, pady=10)
+    label_quantidade_horas.grid(row=2, column=0, padx=10, pady=10, sticky='w')
     
-    entry_quantidade_horas = tk.Entry(config_window)
-    entry_quantidade_horas.grid(row=2, column=1, padx=10, pady=10)
+    entry_quantidade_horas = tk.Entry(config_window, width=5)
+    entry_quantidade_horas.grid(row=2, column=1, padx=10, pady=10, sticky='w')
     
     botao_salvar = tk.Button(config_window, text='Salvar', command=inserir_dados)
     botao_salvar.grid(row=3, column=0, columnspan=2, padx=10, pady=10) 
@@ -180,6 +200,50 @@ def abrir_config_horas():
     # Label para exibir a mensagem de sucesso
     mensagem_label = tk.Label(config_window, text='')
     mensagem_label.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
+    
+    def toggle_edit_mode():
+        global edit_mode
+
+        # Inverter o valor da variável de controle
+        edit_mode = not edit_mode
+
+        # Habilitar/desabilitar a edição dos campos
+        entry_valor_60.config(state='normal' if edit_mode else 'disabled')
+        entry_valor_80.config(state='normal' if edit_mode else 'disabled')
+        entry_valor_100.config(state='normal' if edit_mode else 'disabled')
+        entry_valor_bip.config(state='normal' if edit_mode else 'disabled')
+    
+    #Configurar valores de hora extra
+    label_titulo2 = tk.Label(config_window, text='Configurar valor de horas extras', font=('Arial', 16, 'bold'))
+    label_titulo2.grid(row=7, column=0, columnspan=2, padx=10, pady=10)
+    
+    label_valor_60 = tk.Label(config_window, text='Valor Hora Extra 60%(Segunda a sexta):')
+    label_valor_60.grid(row=8, column=0, padx=10, pady=10, sticky='w')
+    
+    entry_valor_60 = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_60.grid(row=8, column=1, padx=10, pady=10, sticky='w')
+    
+    label_valor_80 = tk.Label(config_window, text='Valor Hora Extra 80%(Sabado):')
+    label_valor_80.grid(row=9, column=0, padx=10, pady=10, sticky='w')
+    
+    entry_valor_80 = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_80.grid(row=9, column=1, padx=10, pady=10, sticky='w')
+    
+    label_valor_100 = tk.Label(config_window, text='Valor Hora Extra 100%(Domingo e feriado):')
+    label_valor_100.grid(row=10, column=0, padx=10, pady=10,  sticky='w')
+    
+    entry_valor_100 = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_100.grid(row=10, column=1, padx=10, pady=10, sticky='w')
+    
+    label_valor_bip = tk.Label(config_window, text='Valor Hora BIP:')
+    label_valor_bip.grid(row=11, column=0, padx=10, pady=10,  sticky='w')
+    
+    entry_valor_bip = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_bip.grid(row=11, column=1, padx=10, pady=10, sticky='w')
+    
+    # Criar o botão para editar os campos
+    botao_editar = tk.Button(config_window, text='Editar', command=toggle_edit_mode)
+    botao_editar.grid(row=12, column=0, columnspan=2, padx=10, pady=10)
        
     # Função para voltar à janela principal
     def voltar_janela_principal():
@@ -193,10 +257,15 @@ def abrir_config_horas():
     # Criar o item de menu "Voltar"
     menubar_config.add_command(label='VOLTAR ', command=voltar_janela_principal)
     
-criar_tabela()
-    
+    # Configurar o evento para fechar a janela
+    config_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
+        
+def encerrar_programa():
+    app.quit()
+            
 #Criar o submenu Configurar Horas    
 menu_principal.add_command(label='Configurar Horas', command=abrir_config_horas)
 
+criar_tabela()
 mostrar_calendario()
 app.mainloop()
