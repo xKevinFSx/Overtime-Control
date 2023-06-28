@@ -18,6 +18,11 @@ entry_valor_100 = None
 entry_valor_bip = None
 edit_mode = False  # Variável de controle para o modo de edição
 
+valor_60 = None
+valor_80 = None
+valor_100 = None
+valor_bip = None
+
 def mostrar_calendario():
     hoje = date.today()
     ano = hoje.year
@@ -64,19 +69,19 @@ def mostrar_calendario():
         for day_num, day in enumerate(week):
             if week_num == 0 and day_num < dia_semana_primeiro_dia:
                 # Dias do mês anterior
-                label = tk.Label(calendar_frame, text=dia_mes_anterior, padx=10, pady=5, font=('Arial', 35), relief='raised')
+                label = tk.Label(calendar_frame, text=str(dia_mes_anterior).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_mes_anterior += 1
             elif day == 0:
                 # Dias do próximo mês
-                label = tk.Label(calendar_frame, text=dia_proximo_mes, padx=10, pady=5, font=('Arial', 35), relief='raised')
+                label = tk.Label(calendar_frame, text=str(dia_proximo_mes).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_proximo_mes += 1
             elif day > num_dias_mes_atual:
                 # Dias adicionais do próximo mês
-                label = tk.Label(calendar_frame, text=dia_proximo_mes, padx=10, pady=5, font=('Arial', 35), relief='raised')
+                label = tk.Label(calendar_frame, text=str(dia_proximo_mes).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_proximo_mes += 1
             else:
                 # Dias do mês atual
-                label = tk.Label(calendar_frame, text=day, padx=10, pady=5, font=('Arial', 35), relief='raised')
+                label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
             label.grid(row=week_num+1, column=day_num, sticky='w')
     
 #Tela
@@ -95,20 +100,38 @@ calendar_frame.grid(row=1, column=2, padx=10, pady=10, rowspan=8)
 label1 = tk.Label(app, text='Qtd horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
 label1.grid(row=1, column=3, padx=70, pady=0, sticky='sw')
 
+qtd_horas_extras_segsex = tk.Label(app, text='0', font=('Arial', 15))
+qtd_horas_extras_segsex.grid(row=1, column=4, ipadx=0, sticky='sw')
+
 label12 = tk.Label(app, text='Vlr horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
 label12.grid(row=2, column=3, padx=70, sticky='nw')
+
+vlr_horas_extras_segsex = tk.Label(app, text='0', font=('Arial', 15))
+vlr_horas_extras_segsex.grid(row=2, column=4,sticky='nw')
 
 label2 = tk.Label(app, text='Qtd horas extras sábado: ', font=('Arial', 15, 'bold'))
 label2.grid(row=3, column=3, padx=70, pady=0, sticky='sw')
 
+qtd_horas_extras_sab = tk.Label(app, text='0', font=('Arial', 15))
+qtd_horas_extras_sab.grid(row=3, column=4, ipadx=0, sticky='sw')
+
 label21 = tk.Label(app, text='Vlr horas extras sábado: ', font=('Arial', 15, 'bold'))
 label21.grid(row=4, column=3, padx=70, pady=0, sticky='nw')
+
+vlr_horas_extras_sab = tk.Label(app, text='0', font=('Arial', 15))
+vlr_horas_extras_sab.grid(row=4, column=4,sticky='nw')
 
 label3 = tk.Label(app, text='Qtd horas extras domingo e feriado: ', font=('Arial', 15, 'bold'))
 label3.grid(row=5, column=3, padx=70, pady=0, sticky='sw')
 
+qtd_horas_extras_domfer = tk.Label(app, text='0', font=('Arial', 15))
+qtd_horas_extras_domfer.grid(row=5, column=4, ipadx=0, sticky='sw')
+
 label31 = tk.Label(app, text='Vlr horas extras domingo e feriado: ', font=('Arial', 15, 'bold'))
 label31.grid(row=6, column=3, padx=70, pady=0, sticky='nw')
+
+vlr_horas_extras_domfer = tk.Label(app, text='0', font=('Arial', 15))
+vlr_horas_extras_domfer.grid(row=6, column=4,sticky='nw')
 
 #Criar a menu bar
 menubar = Menu(app)
@@ -213,40 +236,55 @@ def abrir_config_horas():
         entry_valor_100.config(state='normal' if edit_mode else 'disabled')
         entry_valor_bip.config(state='normal' if edit_mode else 'disabled')
     
-    #Configurar valores de hora extra
     label_titulo2 = tk.Label(config_window, text='Configurar valor de horas extras', font=('Arial', 16, 'bold'))
     label_titulo2.grid(row=7, column=0, columnspan=2, padx=10, pady=10)
     
     label_valor_60 = tk.Label(config_window, text='Valor Hora Extra 60%(Segunda a sexta):')
     label_valor_60.grid(row=8, column=0, padx=10, pady=10, sticky='w')
     
-    entry_valor_60 = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_60 = tk.Entry(config_window, width=5, state='normal')
     entry_valor_60.grid(row=8, column=1, padx=10, pady=10, sticky='w')
-    
+    entry_valor_60.insert(0, "48.52")
+        
     label_valor_80 = tk.Label(config_window, text='Valor Hora Extra 80%(Sabado):')
     label_valor_80.grid(row=9, column=0, padx=10, pady=10, sticky='w')
     
-    entry_valor_80 = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_80 = tk.Entry(config_window, width=5, state='normal')
     entry_valor_80.grid(row=9, column=1, padx=10, pady=10, sticky='w')
+    entry_valor_80.insert(0, "54.59")
     
     label_valor_100 = tk.Label(config_window, text='Valor Hora Extra 100%(Domingo e feriado):')
     label_valor_100.grid(row=10, column=0, padx=10, pady=10,  sticky='w')
     
-    entry_valor_100 = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_100 = tk.Entry(config_window, width=5, state='normal')
     entry_valor_100.grid(row=10, column=1, padx=10, pady=10, sticky='w')
+    entry_valor_100.insert(0, "60.66")
     
     label_valor_bip = tk.Label(config_window, text='Valor Hora BIP:')
     label_valor_bip.grid(row=11, column=0, padx=10, pady=10,  sticky='w')
     
-    entry_valor_bip = tk.Entry(config_window, width=5, state='disabled')
+    entry_valor_bip = tk.Entry(config_window, width=5, state='normal')
     entry_valor_bip.grid(row=11, column=1, padx=10, pady=10, sticky='w')
-    
+    entry_valor_bip.insert(0, "10.61")
+  
     # Criar o botão para editar os campos
     botao_editar = tk.Button(config_window, text='Editar', command=toggle_edit_mode)
-    botao_editar.grid(row=12, column=0, columnspan=2, padx=10, pady=10)
+    botao_editar.grid(row=12, column=0, columnspan=2, padx=10, pady=10)    
+    
+    # Desabilitar os campos
+    entry_valor_60.config(state='disabled')
+    entry_valor_80.config(state='disabled')
+    entry_valor_100.config(state='disabled')
+    entry_valor_bip.config(state='disabled')
        
     # Função para voltar à janela principal
     def voltar_janela_principal():
+        # Armazenar os valores dos campos
+        valor_60 = entry_valor_60.get()
+        valor_80 = entry_valor_80.get()
+        valor_100 = entry_valor_100.get()
+        valor_bip = entry_valor_bip.get()
+        
         config_window.destroy()
         app.deiconify()  # Mostrar a janela principal novamente
     
