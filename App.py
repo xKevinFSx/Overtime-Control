@@ -89,6 +89,24 @@ app = tk.Tk()
 app.title('Controle de Horas Extras')
 app.geometry('1200x700')
 
+# Definir função para atualizar o campo qtd_horas_extras_segsex
+def atualizar_qtd_horas_extras():
+    # Obter o mês e ano atuais
+    hoje = date.today()
+    ano = hoje.year
+    mes = hoje.month
+
+    # Consultar o banco de dados para obter a quantidade de registros
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM horas WHERE dia_semana IN ('segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira') AND strftime('%Y', data) = ? AND strftime('%m', data) = ?", (ano, mes))
+    resultado = c.fetchone()
+    conn.close()
+
+    if resultado is not None:
+        quantidade = resultado[0]
+        qtd_horas_extras_segsex.insert(0, str(quantidade))
+
 #Criar os widgets
 header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
 header_label.grid(row=0, column=0, columnspan=3, padx=140, pady=10, sticky='w')
@@ -100,7 +118,7 @@ calendar_frame.grid(row=1, column=2, padx=10, pady=10, rowspan=8)
 label1 = tk.Label(app, text='Qtd horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
 label1.grid(row=1, column=3, padx=70, pady=0, sticky='sw')
 
-qtd_horas_extras_segsex = tk.Label(app, text='0', font=('Arial', 15))
+qtd_horas_extras_segsex = tk.Entry(app, text='0', font=('Arial', 15))
 qtd_horas_extras_segsex.grid(row=1, column=4, ipadx=0, sticky='sw')
 
 label12 = tk.Label(app, text='Vlr horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
@@ -150,8 +168,9 @@ def criar_tabela():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS horas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    dia TEXT,
-                    quantidade_horas INTEGER)''')
+                    data DATE,
+                    quantidade_horas INTEGER,
+                    dia_semana TEXT)''')
     conn.commit()
     conn.close()
     
@@ -179,16 +198,23 @@ def inserir_dados():
         mensagem_label.config(text='Por favor, preencha uma quantidade de horas valida!')
         return         
     
+    # Obter o dia da semana da data inserida 
+    dia_semana = datetime.strptime(dia, '%d/%m/%Y').strftime('%A')
+    
     dia_sqlite = converter_data(dia)
     
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
-    c.execute("INSERT INTO horas (dia, quantidade_horas) VALUES (?, ?)", (dia, quantidade_horas))
+    c.execute("INSERT INTO horas (data, quantidade_horas, dia_semana) VALUES (?, ?, ?)", (dia_sqlite, quantidade_horas, dia_semana))
     conn.commit()
     conn.close()
     
     # Exibir mensagem de sucesso na interface
     mensagem_label.config(text='Horas inseridas com sucesso!')
+    
+    # Limpar os campos após salvar as horas extras com sucesso
+    entry_dia.delete(0, "end")
+    entry_quantidade_horas.delete(0, "end")
     
 def abrir_config_horas():
     global entry_dia, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label
@@ -208,7 +234,7 @@ def abrir_config_horas():
     label_dia = tk.Label(config_window, text='Dia:')
     label_dia.grid(row=1, column=0, padx=10, pady=10, sticky='w')
     
-    entry_dia = tk.Entry(config_window, width=5)
+    entry_dia = tk.Entry(config_window, width=10)
     entry_dia.grid(row=1, column=1, padx=10, pady=10, sticky='w')
     
     label_quantidade_horas = tk.Label(config_window, text='Quantidade de Horas:')
@@ -306,4 +332,5 @@ menu_principal.add_command(label='Configurar Horas', command=abrir_config_horas)
 
 criar_tabela()
 mostrar_calendario()
+atualizar_qtd_horas_extras()
 app.mainloop()
