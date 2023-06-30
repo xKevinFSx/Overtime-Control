@@ -3,7 +3,6 @@ from tkinter import *
 from datetime import date, datetime, timedelta
 import calendar
 import locale
-from tkinter import messagebox
 import sqlite3
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -18,10 +17,14 @@ entry_valor_100 = None
 entry_valor_bip = None
 edit_mode = False  # Variável de controle para o modo de edição
 
-valor_60 = None
-valor_80 = None
-valor_100 = None
-valor_bip = None
+valor_60 = 48.52
+valor_80 = 54.59
+valor_100 = 60.66
+valor_bip = 10.61
+
+total_horas_semana = 0
+total_horas_sabado = 0
+total_horas_domingo = 0
 
 def mostrar_calendario():
     hoje = date.today()
@@ -91,22 +94,85 @@ app.geometry('1200x700')
 
 # Definir função para atualizar o campo qtd_horas_extras_segsex
 def atualizar_qtd_horas_extras():
+    global total_horas_semana, total_horas_sabado, total_horas_domingo
+    
+    #limpar as variaveis de horas
+    total_horas_semana = 0
+    total_horas_sabado = 0
+    total_horas_domingo = 0
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    
     # Obter o mês e ano atuais
     hoje = date.today()
     ano = hoje.year
     mes = hoje.month
-
-    # Consultar o banco de dados para obter a quantidade de registros
-    conn = sqlite3.connect('horas.db')
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM horas WHERE dia_semana IN ('segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira') AND strftime('%Y', data) = ? AND strftime('%m', data) = ?", (ano, mes))
-    resultado = c.fetchone()
+    
+    dias_semana = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira']
+    
+    #Contar qtd de horas extras na semana
+    for dia_semana in dias_semana:
+        consulta1 = f"SELECT SUM(quantidade_horas) FROM horas WHERE dia_semana = ? AND strftime('%m', data) = ? AND strftime('%Y', data) = ?"
+        c.execute(consulta1, (dia_semana, str(mes).zfill(2), str(ano)))
+        
+        resultado1 = c.fetchone()
+        
+        if resultado1 [0]:
+            total_horas_semana += resultado1[0]
+            
+    #Contar qtd de horas extras nos sabados
+    consulta2 = "SELECT SUM(quantidade_horas) FROM horas WHERE dia_semana = 'sábado' AND strftime('%m', data) = ? AND strftime('%Y', data) = ?"        
+    c.execute(consulta2,(str(mes).zfill(2), str(ano)))
+    
+    resultado2 = c.fetchone()
+    if resultado2[0]:
+        total_horas_sabado += resultado2[0]
+            
+    #Contar qtd de horas extras nos sabados
+    consulta3 = "SELECT SUM(quantidade_horas) FROM horas WHERE dia_semana = 'domingo' AND strftime('%m', data) = ? AND strftime('%Y', data) = ?"        
+    c.execute(consulta3,(str(mes).zfill(2), str(ano)))
+    
+    resultado3 = c.fetchone()
+    if resultado3[0]:
+        total_horas_domingo += resultado3[0]      
     conn.close()
-
-    if resultado is not None:
-        quantidade = resultado[0]
-        qtd_horas_extras_segsex.insert(0, str(quantidade))
-
+    
+    qtd_horas_extras_segsex.config(text=f"{total_horas_semana} hora(s)")
+    qtd_horas_extras_sab.config(text=f"{total_horas_sabado} hora(s)")
+    qtd_horas_extras_domfer.config(text=f"{total_horas_domingo} hora(s)")
+    #qtd_horas_bips.config(text=f'{total_horas_bip} hora(s)')
+    
+    #qtd_segsex = float(total_horas_semana)
+    #vlr_segsex = float(valor_60)
+    if valor_60 is not None:
+        resultado_segsex = total_horas_semana * valor_60
+        resultado_segsex_str = str(resultado_segsex).replace('.', ',')
+        vlr_horas_extras_segsex.config(text=f"R$ {resultado_segsex_str}")
+    else:
+        None
+    
+    if valor_80 is not None:
+        resultado_sab = total_horas_sabado * valor_80
+        resultado_sab_str = str(resultado_sab).replace('.', ',')
+        vlr_horas_extras_sab.config(text=f"R$ {resultado_sab_str}")
+    else:
+        None
+        
+    if valor_100 is not None:
+        resultado_dom = total_horas_domingo * valor_100
+        resultado_dom_str = str(resultado_dom).replace('.', ',')
+        vlr_horas_extras_domfer.config(text=f"R$ {resultado_dom_str}")
+    else:
+        None
+        
+    #if valor_bip is not None:
+        #resultado_bip = total_horas_bip * valor_bip
+        #resultado_bip_str = str(resultado_bip).replace('.', ',')
+        #vlr_horas_bips.config(text=f"R$ {resultado_bip_str}")S
+    #else:
+        #None
+        
 #Criar os widgets
 header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
 header_label.grid(row=0, column=0, columnspan=3, padx=140, pady=10, sticky='w')
@@ -118,7 +184,7 @@ calendar_frame.grid(row=1, column=2, padx=10, pady=10, rowspan=8)
 label1 = tk.Label(app, text='Qtd horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
 label1.grid(row=1, column=3, padx=70, pady=0, sticky='sw')
 
-qtd_horas_extras_segsex = tk.Entry(app, text='0', font=('Arial', 15))
+qtd_horas_extras_segsex = tk.Label(app, text='0', font=('Arial', 15))
 qtd_horas_extras_segsex.grid(row=1, column=4, ipadx=0, sticky='sw')
 
 label12 = tk.Label(app, text='Vlr horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
@@ -151,6 +217,18 @@ label31.grid(row=6, column=3, padx=70, pady=0, sticky='nw')
 vlr_horas_extras_domfer = tk.Label(app, text='0', font=('Arial', 15))
 vlr_horas_extras_domfer.grid(row=6, column=4,sticky='nw')
 
+label4 = tk.Label(app, text='Qtd horas BIPs: ', font=('Arial', 15, 'bold'))
+label4.grid(row=7, column=3, padx=70, pady=0, sticky='sw')
+
+qtd_horas_bips = tk.Label(app, text='0', font=('Arial', 15))
+qtd_horas_bips.grid(row=7, column=4,sticky='sw')
+
+label41 = tk.Label(app, text='Vlr horas BIPs: ', font=('Arial', 15, 'bold'))
+label41.grid(row=8, column=3, padx=70, pady=0, sticky='nw')
+
+vlr_horas_bips = tk.Label(app, text='0', font=('Arial', 15))
+vlr_horas_bips.grid(row=8, column=4,sticky='nw')
+
 #Criar a menu bar
 menubar = Menu(app)
 app.config(menu=menubar)
@@ -171,6 +249,12 @@ def criar_tabela():
                     data DATE,
                     quantidade_horas INTEGER,
                     dia_semana TEXT)''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS hora_bip (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    qtd_horas INT,
+                    data_inicio DATE,
+                    data_fim DATE)''')
     conn.commit()
     conn.close()
     
@@ -216,6 +300,7 @@ def inserir_dados():
     entry_dia.delete(0, "end")
     entry_quantidade_horas.delete(0, "end")
     
+# Função para abrir a segunda tela
 def abrir_config_horas():
     global entry_dia, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label
     
@@ -305,6 +390,8 @@ def abrir_config_horas():
        
     # Função para voltar à janela principal
     def voltar_janela_principal():
+        #global valor_60, valor_80, valor_100, valor_bip
+        
         # Armazenar os valores dos campos
         valor_60 = entry_valor_60.get()
         valor_80 = entry_valor_80.get()
@@ -313,6 +400,7 @@ def abrir_config_horas():
         
         config_window.destroy()
         app.deiconify()  # Mostrar a janela principal novamente
+        atualizar_qtd_horas_extras()
     
     # Criar o menu na janela de configuração de horas
     menubar_config = tk.Menu(config_window)
