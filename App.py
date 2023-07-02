@@ -25,6 +25,7 @@ valor_bip = 10.61
 total_horas_semana = 0
 total_horas_sabado = 0
 total_horas_domingo = 0
+total_horas_bip = 0
 
 def mostrar_calendario():
     hoje = date.today()
@@ -50,24 +51,24 @@ def mostrar_calendario():
         label = tk.Label(calendar_frame, text=day, padx=10, pady=5, font=('Arial', 20, 'bold'))
         label.grid(row=0, column=i)
         
-    # Obter o primeiro dia do mês
+    #Obter o primeiro dia do mês
     primeiro_dia_mes = datetime(ano, mes, 1)
 
-    # Obter o dia da semana do primeiro dia do mês (0 = segunda-feira, 6 = domingo)
+    #Obter o dia da semana do primeiro dia do mês (0 = segunda-feira, 6 = domingo)
     dia_semana_primeiro_dia = primeiro_dia_mes.weekday()
 
-    # Calcular o número de dias no mês anterior
+    #Calcular o número de dias no mês anterior
     ultimo_dia_mes_anterior = primeiro_dia_mes - timedelta(days=1)
     num_dias_mes_anterior = ultimo_dia_mes_anterior.day
     
-    # Calcular o número de dias no mês atual
+    #Calcular o número de dias no mês atual
     num_dias_mes_atual = calendar.monthrange(ano, mes)[1]
 
-    # Preencher os dias do calendário
+    #Preencher os dias do calendário
     dia_mes_anterior = num_dias_mes_anterior - dia_semana_primeiro_dia + 1
     dia_proximo_mes = 1
 
-    # Preencher os dias do calendário
+    #Preencher os dias do calendário
     for week_num, week in enumerate(cal):
         for day_num, day in enumerate(week):
             if week_num == 0 and day_num < dia_semana_primeiro_dia:
@@ -94,12 +95,13 @@ app.geometry('1200x700')
 
 # Definir função para atualizar o campo qtd_horas_extras_segsex
 def atualizar_qtd_horas_extras():
-    global total_horas_semana, total_horas_sabado, total_horas_domingo
+    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip
     
     #limpar as variaveis de horas
     total_horas_semana = 0
     total_horas_sabado = 0
     total_horas_domingo = 0
+    total_horas_bip = 0
     
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
@@ -117,13 +119,12 @@ def atualizar_qtd_horas_extras():
         c.execute(consulta1, (dia_semana, str(mes).zfill(2), str(ano)))
         
         resultado1 = c.fetchone()
-        
         if resultado1 [0]:
             total_horas_semana += resultado1[0]
             
     #Contar qtd de horas extras nos sabados
     consulta2 = "SELECT SUM(quantidade_horas) FROM horas WHERE dia_semana = 'sábado' AND strftime('%m', data) = ? AND strftime('%Y', data) = ?"        
-    c.execute(consulta2,(str(mes).zfill(2), str(ano)))
+    c.execute(consulta2, (str(mes).zfill(2), str(ano)))
     
     resultado2 = c.fetchone()
     if resultado2[0]:
@@ -131,20 +132,26 @@ def atualizar_qtd_horas_extras():
             
     #Contar qtd de horas extras nos sabados
     consulta3 = "SELECT SUM(quantidade_horas) FROM horas WHERE dia_semana = 'domingo' AND strftime('%m', data) = ? AND strftime('%Y', data) = ?"        
-    c.execute(consulta3,(str(mes).zfill(2), str(ano)))
+    c.execute(consulta3, (str(mes).zfill(2), str(ano)))
     
     resultado3 = c.fetchone()
     if resultado3[0]:
         total_horas_domingo += resultado3[0]      
+    
+    #Contar qtd de horas BIPs no mês
+    consulta4 = "SELECT SUM(quantidade_horas) FROM horas_bip WHERE date('now') BETWEEN data_inicio AND data_fim"
+    c.execute(consulta4)
+    
+    resultado4 = c.fetchone()
+    if resultado4[0]:
+        total_horas_bip += resultado4[0]      
     conn.close()
     
     qtd_horas_extras_segsex.config(text=f"{total_horas_semana} hora(s)")
     qtd_horas_extras_sab.config(text=f"{total_horas_sabado} hora(s)")
     qtd_horas_extras_domfer.config(text=f"{total_horas_domingo} hora(s)")
-    #qtd_horas_bips.config(text=f'{total_horas_bip} hora(s)')
+    qtd_horas_bips.config(text=f'{total_horas_bip} hora(s)')
     
-    #qtd_segsex = float(total_horas_semana)
-    #vlr_segsex = float(valor_60)
     if valor_60 is not None:
         resultado_segsex = total_horas_semana * valor_60
         resultado_segsex_str = str(resultado_segsex).replace('.', ',')
@@ -166,12 +173,12 @@ def atualizar_qtd_horas_extras():
     else:
         None
         
-    #if valor_bip is not None:
-        #resultado_bip = total_horas_bip * valor_bip
-        #resultado_bip_str = str(resultado_bip).replace('.', ',')
-        #vlr_horas_bips.config(text=f"R$ {resultado_bip_str}")S
-    #else:
-        #None
+    if valor_bip is not None:
+        resultado_bip = total_horas_bip * valor_bip
+        resultado_bip_str = str(resultado_bip).replace('.', ',')
+        vlr_horas_bips.config(text=f"R$ {resultado_bip_str}")
+    else:
+        None
         
 #Criar os widgets
 header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
@@ -250,11 +257,11 @@ def criar_tabela():
                     quantidade_horas INTEGER,
                     dia_semana TEXT)''')
     
-    c.execute('''CREATE TABLE IF NOT EXISTS hora_bip (
+    c.execute('''CREATE TABLE IF NOT EXISTS horas_bip (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    qtd_horas INT,
                     data_inicio DATE,
-                    data_fim DATE)''')
+                    data_fim DATE,
+                    quantidade_horas INTEGER)''')
     conn.commit()
     conn.close()
     
@@ -264,8 +271,8 @@ def converter_data(data):
     data_sqlite = data_obj.strftime("%Y-%m-%d")
     return data_sqlite
     
-# Função para inserir os dados no banco de dados
-def inserir_dados():
+# Função para inserir horas extras no banco de dados
+def inserir_horas_extra():
     dia = entry_dia.get()
     quantidade_horas = entry_quantidade_horas.get()
     
@@ -300,9 +307,45 @@ def inserir_dados():
     entry_dia.delete(0, "end")
     entry_quantidade_horas.delete(0, "end")
     
+#Função para inserir horas BIP no banco de dados
+def inserir_horas_bip():
+    data_inicio = entry_data_ini.get()
+    data_fim = entry_data_fim.get()
+    horas_bip = entry_horas_bip.get()
+    
+    #Verificar se os campos estão preenchidos
+    if not data_inicio:
+        mensagem_label2.config(text='Por favor, preencha uma data inicio!')
+        return
+    
+    if not data_fim:
+        mensagem_label2.config(text='Por favor, preencha uma data fim!')
+        return    
+    
+    if horas_bip == '0':
+        mensagem_label2.config(text='Por favor, preencha uma quantidade de horas valida!')
+        return         
+    
+    dia_inicio = converter_data(data_inicio)
+    dia_fim = converter_data(data_fim)
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO horas_bip (data_inicio, data_fim, quantidade_horas) VALUES (?, ?, ?)", (dia_inicio, dia_fim, horas_bip))
+    conn.commit()
+    conn.close()
+    
+    #Exibir mensagem de sucesso na interface
+    mensagem_label2.config(text='Horas BIP inseridas com sucesso!')
+    
+    #Limpar os campos após salvar as horas extras com sucesso
+    entry_data_ini.delete(0, "end")
+    entry_data_fim.delete(0, "end")
+    entry_horas_bip.delete(0, "end")
+    
 # Função para abrir a segunda tela
 def abrir_config_horas():
-    global entry_dia, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label
+    global entry_dia, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, entry_data_ini, entry_data_fim, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2
     
     #Ocultar janela atual
     app.withdraw()
@@ -328,12 +371,40 @@ def abrir_config_horas():
     entry_quantidade_horas = tk.Entry(config_window, width=5)
     entry_quantidade_horas.grid(row=2, column=1, padx=10, pady=10, sticky='w')
     
-    botao_salvar = tk.Button(config_window, text='Salvar', command=inserir_dados)
+    botao_salvar = tk.Button(config_window, text='Salvar', command=inserir_horas_extra)
     botao_salvar.grid(row=3, column=0, columnspan=2, padx=10, pady=10) 
     
     # Label para exibir a mensagem de sucesso
     mensagem_label = tk.Label(config_window, text='')
     mensagem_label.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
+    
+    label_titulo3 = tk.Label(config_window, text='Adicionar Horas BIP', font=('Arial', 16, 'bold'))
+    label_titulo3.grid(row=0, column=5, columnspan=6, padx=100, pady=0)
+    
+    label_data_ini = tk.Label(config_window, text='Dia de inicio:')
+    label_data_ini.grid(row=1, column=5, columnspan=2, padx=65, pady=10, sticky='e')
+    
+    entry_data_ini = tk.Entry(config_window, width=10)
+    entry_data_ini.grid(row=1, column=6, padx=0, pady=10, sticky='e')
+    
+    label_data_fim = tk.Label(config_window, text='Dia de fim:')
+    label_data_fim.grid(row=1, column=7, padx=0, pady=10, sticky='e')
+    
+    entry_data_fim = tk.Entry(config_window, width=10)
+    entry_data_fim.grid(row=1, column=8, padx=0, pady=10, sticky='w')
+    
+    label_horas_bip = tk.Label(config_window, text='Quantidade de horas BIP:')
+    label_horas_bip.grid(row=2, column=6, padx=0, pady=10, sticky='e')
+    
+    entry_horas_bip = tk.Entry(config_window, width=5)
+    entry_horas_bip.grid(row=2, column=7, padx=0, pady=10, sticky='w')    
+    
+    botao_salvar_hrbip = tk.Button(config_window, text='Salvar', command=inserir_horas_bip)
+    botao_salvar_hrbip.grid(row=3, column=7, padx=0, pady=10, sticky='w') 
+    
+    # Label para exibir a mensagem de sucesso
+    mensagem_label2 = tk.Label(config_window, text='')
+    mensagem_label2.grid(row=4, column=6, columnspan=4, padx=0, pady=10)
     
     def toggle_edit_mode():
         global edit_mode
@@ -355,28 +426,28 @@ def abrir_config_horas():
     
     entry_valor_60 = tk.Entry(config_window, width=5, state='normal')
     entry_valor_60.grid(row=8, column=1, padx=10, pady=10, sticky='w')
-    entry_valor_60.insert(0, "48.52")
+    entry_valor_60.insert(0, float(valor_60))
         
     label_valor_80 = tk.Label(config_window, text='Valor Hora Extra 80%(Sabado):')
     label_valor_80.grid(row=9, column=0, padx=10, pady=10, sticky='w')
     
     entry_valor_80 = tk.Entry(config_window, width=5, state='normal')
     entry_valor_80.grid(row=9, column=1, padx=10, pady=10, sticky='w')
-    entry_valor_80.insert(0, "54.59")
+    entry_valor_80.insert(0, float(valor_80))
     
     label_valor_100 = tk.Label(config_window, text='Valor Hora Extra 100%(Domingo e feriado):')
     label_valor_100.grid(row=10, column=0, padx=10, pady=10,  sticky='w')
     
     entry_valor_100 = tk.Entry(config_window, width=5, state='normal')
     entry_valor_100.grid(row=10, column=1, padx=10, pady=10, sticky='w')
-    entry_valor_100.insert(0, "60.66")
+    entry_valor_100.insert(0, float(valor_100))
     
     label_valor_bip = tk.Label(config_window, text='Valor Hora BIP:')
     label_valor_bip.grid(row=11, column=0, padx=10, pady=10,  sticky='w')
     
     entry_valor_bip = tk.Entry(config_window, width=5, state='normal')
     entry_valor_bip.grid(row=11, column=1, padx=10, pady=10, sticky='w')
-    entry_valor_bip.insert(0, "10.61")
+    entry_valor_bip.insert(0, float(valor_bip))
   
     # Criar o botão para editar os campos
     botao_editar = tk.Button(config_window, text='Editar', command=toggle_edit_mode)
