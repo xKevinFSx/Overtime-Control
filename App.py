@@ -8,6 +8,11 @@ import sqlite3
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # Variáveis globais para os campos de entrada
+hoje = date.today()
+mes = hoje.month
+ano = hoje.year
+mes_anterior = mes - 1
+
 entry_dia = None
 entry_hora = None
 entry_quantidade_horas = None
@@ -28,9 +33,11 @@ total_horas_domingo = 0
 total_horas_bip = 0
 
 def mostrar_calendario():
-    hoje = date.today()
-    ano = hoje.year
-    mes = hoje.month
+    global hoje, mes, mes_anterior
+    
+    #hoje = date.today()
+    #ano = hoje.year
+    #mes = hoje.month
     
     #Criar um objeto de calendario
     cal = calendar.monthcalendar(ano, mes)
@@ -60,6 +67,7 @@ def mostrar_calendario():
     #Calcular o número de dias no mês anterior
     ultimo_dia_mes_anterior = primeiro_dia_mes - timedelta(days=1)
     num_dias_mes_anterior = ultimo_dia_mes_anterior.day
+    mes_anterior = mes - 1
     
     #Calcular o número de dias no mês atual
     num_dias_mes_atual = calendar.monthrange(ano, mes)[1]
@@ -91,6 +99,7 @@ def mostrar_calendario():
 #Tela
 app = tk.Tk()
 app.title('Controle de Horas Extras')
+app.resizable(False, False)
 app.geometry('1200x700')
 
 # Definir função para atualizar o campo qtd_horas_extras_segsex
@@ -187,54 +196,57 @@ header_label.grid(row=0, column=0, columnspan=3, padx=140, pady=10, sticky='w')
 calendar_frame = tk.Frame(app)
 calendar_frame.grid(row=1, column=2, padx=10, pady=10, rowspan=8)
 
+label_titulo = tk.Label(app, text=f'Valores calculados do dia 15/0{mes_anterior} até o dia 15/0{mes}', font=('Arial', 18, 'bold'))
+label_titulo.grid(row=0, column=3, columnspan=2, sticky='w')
+
 #Criar um campo de label no canto direito
-label1 = tk.Label(app, text='Qtd horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
+label1 = tk.Label(app, text='Qtd horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
 label1.grid(row=1, column=3, padx=70, pady=0, sticky='sw')
 
-qtd_horas_extras_segsex = tk.Label(app, text='0', font=('Arial', 15))
-qtd_horas_extras_segsex.grid(row=1, column=4, ipadx=0, sticky='sw')
+qtd_horas_extras_segsex = tk.Label(app, font=('Arial', 15))
+qtd_horas_extras_segsex.grid(row=1, column=3, columnspan=2, padx=410, sticky='sw')
 
-label12 = tk.Label(app, text='Vlr horas extras segunda à sexta: ', font=('Arial', 15, 'bold'))
+label12 = tk.Label(app, text='Vlr horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
 label12.grid(row=2, column=3, padx=70, sticky='nw')
 
-vlr_horas_extras_segsex = tk.Label(app, text='0', font=('Arial', 15))
-vlr_horas_extras_segsex.grid(row=2, column=4,sticky='nw')
+vlr_horas_extras_segsex = tk.Label(app, font=('Arial', 15))
+vlr_horas_extras_segsex.grid(row=2, column=3, columnspan=2, padx=410, sticky='nw')
 
-label2 = tk.Label(app, text='Qtd horas extras sábado: ', font=('Arial', 15, 'bold'))
+label2 = tk.Label(app, text='Qtd horas extras sábado:', font=('Arial', 15, 'bold'))
 label2.grid(row=3, column=3, padx=70, pady=0, sticky='sw')
 
-qtd_horas_extras_sab = tk.Label(app, text='0', font=('Arial', 15))
-qtd_horas_extras_sab.grid(row=3, column=4, ipadx=0, sticky='sw')
+qtd_horas_extras_sab = tk.Label(app, font=('Arial', 15))
+qtd_horas_extras_sab.grid(row=3, column=3, columnspan=2, padx=325, sticky='sw')
 
-label21 = tk.Label(app, text='Vlr horas extras sábado: ', font=('Arial', 15, 'bold'))
+label21 = tk.Label(app, text='Vlr horas extras sábado:', font=('Arial', 15, 'bold'))
 label21.grid(row=4, column=3, padx=70, pady=0, sticky='nw')
 
-vlr_horas_extras_sab = tk.Label(app, text='0', font=('Arial', 15))
-vlr_horas_extras_sab.grid(row=4, column=4,sticky='nw')
+vlr_horas_extras_sab = tk.Label(app, font=('Arial', 15))
+vlr_horas_extras_sab.grid(row=4, column=3, columnspan=2, padx=325, sticky='nw')
 
-label3 = tk.Label(app, text='Qtd horas extras domingo e feriado: ', font=('Arial', 15, 'bold'))
+label3 = tk.Label(app, text='Qtd horas extras domingo e feriado:', font=('Arial', 15, 'bold'))
 label3.grid(row=5, column=3, padx=70, pady=0, sticky='sw')
 
-qtd_horas_extras_domfer = tk.Label(app, text='0', font=('Arial', 15))
-qtd_horas_extras_domfer.grid(row=5, column=4, ipadx=0, sticky='sw')
+qtd_horas_extras_domfer = tk.Label(app, font=('Arial', 15))
+qtd_horas_extras_domfer.grid(row=5, column=3, columnspan=2, padx=425, sticky='sw')
 
-label31 = tk.Label(app, text='Vlr horas extras domingo e feriado: ', font=('Arial', 15, 'bold'))
+label31 = tk.Label(app, text='Vlr horas extras domingo e feriado:', font=('Arial', 15, 'bold'))
 label31.grid(row=6, column=3, padx=70, pady=0, sticky='nw')
 
-vlr_horas_extras_domfer = tk.Label(app, text='0', font=('Arial', 15))
-vlr_horas_extras_domfer.grid(row=6, column=4,sticky='nw')
+vlr_horas_extras_domfer = tk.Label(app, font=('Arial', 15))
+vlr_horas_extras_domfer.grid(row=6, column=3, columnspan=2, padx=425, sticky='nw')
 
-label4 = tk.Label(app, text='Qtd horas BIPs: ', font=('Arial', 15, 'bold'))
+label4 = tk.Label(app, text='Qtd horas BIPs:', font=('Arial', 15, 'bold'))
 label4.grid(row=7, column=3, padx=70, pady=0, sticky='sw')
 
-qtd_horas_bips = tk.Label(app, text='0', font=('Arial', 15))
-qtd_horas_bips.grid(row=7, column=4,sticky='sw')
+qtd_horas_bips = tk.Label(app, font=('Arial', 15))
+qtd_horas_bips.grid(row=7, column=3, columnspan=2, padx=230, sticky='sw')
 
-label41 = tk.Label(app, text='Vlr horas BIPs: ', font=('Arial', 15, 'bold'))
+label41 = tk.Label(app, text='Vlr horas BIPs:', font=('Arial', 15, 'bold'))
 label41.grid(row=8, column=3, padx=70, pady=0, sticky='nw')
 
-vlr_horas_bips = tk.Label(app, text='0', font=('Arial', 15))
-vlr_horas_bips.grid(row=8, column=4,sticky='nw')
+vlr_horas_bips = tk.Label(app, font=('Arial', 15))
+vlr_horas_bips.grid(row=8, column=3, columnspan=2, padx=230, sticky='nw')
 
 #Criar a menu bar
 menubar = Menu(app)
@@ -356,50 +368,50 @@ def abrir_config_horas():
     config_window.geometry('1200x700')
     
     # Criar os campos e botão na janela de configuração de horas
-    label_titulo1 = tk.Label(config_window, text='Adicionar horas extras', font=('Arial', 16, 'bold'))
+    label_titulo1 = LabelFrame(config_window, text='Adicionar horas extras', font=('Arial', 16, 'bold'))
     label_titulo1.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
     
-    label_dia = tk.Label(config_window, text='Dia:')
+    label_dia = tk.Label(label_titulo1, text='Dia:')
     label_dia.grid(row=1, column=0, padx=10, pady=10, sticky='w')
     
-    entry_dia = tk.Entry(config_window, width=10)
-    entry_dia.grid(row=1, column=1, padx=10, pady=10, sticky='w')
+    entry_dia = tk.Entry(label_titulo1, width=10)
+    entry_dia.grid(row=1, column=0, columnspan=2, padx=45, pady=10, sticky='w')
     
-    label_quantidade_horas = tk.Label(config_window, text='Quantidade de Horas:')
+    label_quantidade_horas = tk.Label(label_titulo1, text='Quantidade de Horas:')
     label_quantidade_horas.grid(row=2, column=0, padx=10, pady=10, sticky='w')
     
-    entry_quantidade_horas = tk.Entry(config_window, width=5)
-    entry_quantidade_horas.grid(row=2, column=1, padx=10, pady=10, sticky='w')
+    entry_quantidade_horas = tk.Entry(label_titulo1, width=5)
+    entry_quantidade_horas.grid(row=2, column=1, padx=0, pady=10, sticky='e')
     
-    botao_salvar = tk.Button(config_window, text='Salvar', command=inserir_horas_extra)
-    botao_salvar.grid(row=3, column=0, columnspan=2, padx=10, pady=10) 
+    botao_salvar = tk.Button(label_titulo1, text='Salvar', command=inserir_horas_extra)
+    botao_salvar.grid(row=3, column=0, padx=10, pady=10) 
     
     # Label para exibir a mensagem de sucesso
     mensagem_label = tk.Label(config_window, text='')
     mensagem_label.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
     
-    label_titulo3 = tk.Label(config_window, text='Adicionar Horas BIP', font=('Arial', 16, 'bold'))
-    label_titulo3.grid(row=0, column=5, columnspan=6, padx=100, pady=0)
+    label_titulo2 = LabelFrame(config_window, text='Adicionar Horas BIP', font=('Arial', 16, 'bold'), labelanchor='n')
+    label_titulo2.grid(row=0, column=5, columnspan=6, padx=0, pady=0)
     
-    label_data_ini = tk.Label(config_window, text='Dia de inicio:')
-    label_data_ini.grid(row=1, column=5, columnspan=2, padx=65, pady=10, sticky='e')
+    label_data_ini = tk.Label(label_titulo2, text='Dia de inicio:')
+    label_data_ini.grid(row=1, column=5, padx=10, pady=10, sticky='w')
     
-    entry_data_ini = tk.Entry(config_window, width=10)
-    entry_data_ini.grid(row=1, column=6, padx=0, pady=10, sticky='e')
+    entry_data_ini = tk.Entry(label_titulo2, width=10)
+    entry_data_ini.grid(row=1, column=6, padx=0, pady=10, sticky='w')
     
-    label_data_fim = tk.Label(config_window, text='Dia de fim:')
-    label_data_fim.grid(row=1, column=7, padx=0, pady=10, sticky='e')
+    label_data_fim = tk.Label(label_titulo2, text='Dia de fim:')
+    label_data_fim.grid(row=1, column=8, padx=0, pady=10, sticky='e')
     
-    entry_data_fim = tk.Entry(config_window, width=10)
-    entry_data_fim.grid(row=1, column=8, padx=0, pady=10, sticky='w')
+    entry_data_fim = tk.Entry(label_titulo2, width=10)
+    entry_data_fim.grid(row=1, column=9, padx=10, pady=10, sticky='w')
     
-    label_horas_bip = tk.Label(config_window, text='Quantidade de horas BIP:')
-    label_horas_bip.grid(row=2, column=6, padx=0, pady=10, sticky='e')
+    label_horas_bip = tk.Label(label_titulo2, text='Quantidade de horas BIP:')
+    label_horas_bip.grid(row=2, column=5, columnspan=2, padx=10, pady=10, sticky='e')
     
-    entry_horas_bip = tk.Entry(config_window, width=5)
+    entry_horas_bip = tk.Entry(label_titulo2, width=5)
     entry_horas_bip.grid(row=2, column=7, padx=0, pady=10, sticky='w')    
     
-    botao_salvar_hrbip = tk.Button(config_window, text='Salvar', command=inserir_horas_bip)
+    botao_salvar_hrbip = tk.Button(label_titulo2, text='Salvar', command=inserir_horas_bip)
     botao_salvar_hrbip.grid(row=3, column=7, padx=0, pady=10, sticky='w') 
     
     # Label para exibir a mensagem de sucesso
@@ -418,39 +430,39 @@ def abrir_config_horas():
         entry_valor_100.config(state='normal' if edit_mode else 'disabled')
         entry_valor_bip.config(state='normal' if edit_mode else 'disabled')
     
-    label_titulo2 = tk.Label(config_window, text='Configurar valor de horas extras', font=('Arial', 16, 'bold'))
-    label_titulo2.grid(row=7, column=0, columnspan=2, padx=10, pady=10)
+    label_titulo3 = LabelFrame(config_window, text='Configurar valor de horas extras', font=('Arial', 16, 'bold'))
+    label_titulo3.grid(row=7, column=0, columnspan=5, padx=10, pady=10)
     
-    label_valor_60 = tk.Label(config_window, text='Valor Hora Extra 60%(Segunda a sexta):')
-    label_valor_60.grid(row=8, column=0, padx=10, pady=10, sticky='w')
+    label_valor_60 = tk.Label(label_titulo3, text='Valor Hora Extra 60%(Segunda a sexta):')
+    label_valor_60.grid(row=8, column=0, columnspan=4, padx=10, pady=10, sticky='w')
     
-    entry_valor_60 = tk.Entry(config_window, width=5, state='normal')
-    entry_valor_60.grid(row=8, column=1, padx=10, pady=10, sticky='w')
+    entry_valor_60 = tk.Entry(label_titulo3, width=5, state='normal')
+    entry_valor_60.grid(row=8, column=0, columnspan=2, padx=135, pady=10, sticky='e')
     entry_valor_60.insert(0, float(valor_60))
         
-    label_valor_80 = tk.Label(config_window, text='Valor Hora Extra 80%(Sabado):')
-    label_valor_80.grid(row=9, column=0, padx=10, pady=10, sticky='w')
+    label_valor_80 = tk.Label(label_titulo3, text='Valor Hora Extra 80%(Sabado):')
+    label_valor_80.grid(row=9, column=0, columnspan=4, padx=10, pady=10, sticky='w')
     
-    entry_valor_80 = tk.Entry(config_window, width=5, state='normal')
-    entry_valor_80.grid(row=9, column=1, padx=10, pady=10, sticky='w')
+    entry_valor_80 = tk.Entry(label_titulo3, width=5, state='normal')
+    entry_valor_80.grid(row=9, column=0, columnspan=2, padx=180, pady=10, sticky='e')
     entry_valor_80.insert(0, float(valor_80))
     
-    label_valor_100 = tk.Label(config_window, text='Valor Hora Extra 100%(Domingo e feriado):')
-    label_valor_100.grid(row=10, column=0, padx=10, pady=10,  sticky='w')
+    label_valor_100 = tk.Label(label_titulo3, text='Valor Hora Extra 100%(Domingo e feriado):')
+    label_valor_100.grid(row=10, column=0, columnspan=4, padx=10, pady=10,  sticky='w')
     
-    entry_valor_100 = tk.Entry(config_window, width=5, state='normal')
-    entry_valor_100.grid(row=10, column=1, padx=10, pady=10, sticky='w')
+    entry_valor_100 = tk.Entry(label_titulo3, width=5, state='normal')
+    entry_valor_100.grid(row=10, column=0, columnspan=2, padx=115, pady=10, sticky='e')
     entry_valor_100.insert(0, float(valor_100))
     
-    label_valor_bip = tk.Label(config_window, text='Valor Hora BIP:')
-    label_valor_bip.grid(row=11, column=0, padx=10, pady=10,  sticky='w')
+    label_valor_bip = tk.Label(label_titulo3, text='Valor Hora BIP:')
+    label_valor_bip.grid(row=11, column=0, columnspan=4, padx=10, pady=10,  sticky='w')
     
-    entry_valor_bip = tk.Entry(config_window, width=5, state='normal')
-    entry_valor_bip.grid(row=11, column=1, padx=10, pady=10, sticky='w')
+    entry_valor_bip = tk.Entry(label_titulo3, width=5, state='normal')
+    entry_valor_bip.grid(row=11, column=0, columnspan=4, padx=95, pady=10, sticky='w')
     entry_valor_bip.insert(0, float(valor_bip))
   
     # Criar o botão para editar os campos
-    botao_editar = tk.Button(config_window, text='Editar', command=toggle_edit_mode)
+    botao_editar = tk.Button(label_titulo3, text='Editar', command=toggle_edit_mode)
     botao_editar.grid(row=12, column=0, columnspan=2, padx=10, pady=10)    
     
     # Desabilitar os campos
