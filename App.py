@@ -40,13 +40,10 @@ total_horas_domingo = 0
 total_horas_bip = 0
 
 def mostrar_calendario():
-    global hoje, mes, mes_anterior
-    
-    #hoje = date.today()
-    #ano = hoje.year
-    #mes = hoje.month
+    global hoje, mes, mes_anterior, resultado5
     
     #Criar um objeto de calendario
+    calendar.setfirstweekday(calendar.SUNDAY)
     cal = calendar.monthcalendar(ano, mes)
     
     #Limpar qualquer calendario anterior(se houver)
@@ -57,10 +54,9 @@ def mostrar_calendario():
     #Cabeçalho com o nome do mes e do ano
     mes_nome = calendar.month_name[mes].capitalize()
     header_label.config(text=f'{mes_nome} de {ano}')
-    #header_label.config(text=calendar.month_name[mes] + ' de ' + str(ano))
     
     #Preencher os dias da semana acima do calendario
-    days_of_week = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
+    days_of_week = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
     for i, day in enumerate(days_of_week):
         label = tk.Label(calendar_frame, text=day, padx=10, pady=5, font=('Arial', 20, 'bold'))
         label.grid(row=0, column=i)
@@ -68,7 +64,7 @@ def mostrar_calendario():
     #Obter o primeiro dia do mês
     primeiro_dia_mes = datetime(ano, mes, 1)
 
-    #Obter o dia da semana do primeiro dia do mês (0 = segunda-feira, 6 = domingo)
+    #Obter o dia da semana do primeiro dia do mês (0 = domingo, 6 = sabado)
     dia_semana_primeiro_dia = primeiro_dia_mes.weekday()
 
     #Calcular o número de dias no mês anterior
@@ -80,13 +76,20 @@ def mostrar_calendario():
     num_dias_mes_atual = calendar.monthrange(ano, mes)[1]
 
     #Preencher os dias do calendário
-    dia_mes_anterior = num_dias_mes_anterior - dia_semana_primeiro_dia + 1
+    dia_mes_anterior = num_dias_mes_anterior - dia_semana_primeiro_dia 
     dia_proximo_mes = 1
+    
+    #Resgatar os resultados da consulta no banco de dados
+    datas_plantao = []
+    for data_inicio, data_fim in resultado5:
+        dia_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+        dia_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+        datas_plantao.append((dia_inicio, dia_fim))
 
     #Preencher os dias do calendário
     for week_num, week in enumerate(cal):
         for day_num, day in enumerate(week):
-            if week_num == 0 and day_num < dia_semana_primeiro_dia:
+            if week_num == 0 and day_num <= dia_semana_primeiro_dia:
                 # Dias do mês anterior
                 label = tk.Label(calendar_frame, text=str(dia_mes_anterior).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_mes_anterior += 1
@@ -100,8 +103,14 @@ def mostrar_calendario():
                 dia_proximo_mes += 1
             else:
                 # Dias do mês atual
-                label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
-            label.grid(row=week_num+1, column=day_num, sticky='w')
+                data_obj = datetime(ano, mes, day).date()
+                for dia_inicio, dia_fim in datas_plantao:
+                    if dia_inicio <= data_obj <= dia_fim:
+                        label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', bg='purple')
+                        break
+                    else:
+                        label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
+            label.grid(row=week_num+1, column=day_num, sticky='e')
     
 #Tela
 app = tk.Tk()
@@ -111,7 +120,7 @@ app.geometry('1200x700')
 
 # Definir função para atualizar o campo qtd_horas_extras_segsex
 def atualizar_qtd_horas_extras():
-    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior
+    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior, resultado5
     
     #limpar as variaveis de horas
     total_horas_semana = 0
@@ -160,6 +169,12 @@ def atualizar_qtd_horas_extras():
     resultado4 = c.fetchone()
     if resultado4[0]:
         total_horas_bip += resultado4[0]      
+
+    #Selecionar datas de plantãp
+    consulta5 = "SELECT data_inicio, data_fim FROM plantao_hrs"
+    c.execute(consulta5)
+    
+    resultado5 = c.fetchall()
     conn.close()
     
     qtd_horas_extras_segsex.config(text=f"{total_horas_semana} hora(s)")
@@ -279,6 +294,10 @@ def criar_tabela():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     data_fim DATE,
                     quantidade_horas INTEGER)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS plantao_hrs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    data_inicio DATE,
+                    data_fim DATE)''')
     conn.commit()
     conn.close()
     
@@ -334,7 +353,7 @@ def inserir_horas_bip():
     
     #Verificar se os campos estão preenchidos   
     if not data_quinzena:
-        mensagem_label2.config(text='Por favor, preencha uma data fim!')
+        mensagem_label2.config(text='Por favor, preencha uma data!')
         return    
     
     if horas_bip == '0':
@@ -358,10 +377,42 @@ def inserir_horas_bip():
     
     #Chamar função para limpar mensagem de sucesso ou falha
     config_window.after(5000, lambda: mensagem_label2.config(text=''))
+
+def inserir_datas_plantao():
+    data_ini_plantao = cal_inicio.get()
+    data_fim_plantao = cal_fim.get()
+    
+    #Verificar se os campos estão preenchidos   
+    if not data_ini_plantao:
+        mensagem_label3.config(text='Por favor, preencha uma data inicio!')
+        return 
+    
+    if not data_fim_plantao:
+        mensagem_label3.config(text='Por favor, preencha uma data fim!')
+        return  
+    
+    data_inicio = converter_data(data_ini_plantao)
+    data_fim = converter_data(data_fim_plantao)
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO plantao_hrs (data_inicio, data_fim) VALUES (?, ?)", (data_inicio, data_fim))
+    conn.commit()
+    conn.close()
+    
+    #Exibir mensagem de sucesso na interface
+    mensagem_label3.config(text='Dias de plantão inseridos com sucesso!')
+    
+    #Limpar os campos após salvar as horas extras com sucesso
+    cal_inicio.delete(0, "end")
+    cal_fim.delete(0, "end")
+    
+    #Chamar função para limpar mensagem de sucesso ou falha
+    config_window.after(5000, lambda: mensagem_label3.config(text=''))
     
 # Função para abrir a segunda tela
 def abrir_config_horas():
-    global cal_dia_hora_extra, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, cal_quinzena, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2, config_window
+    global cal_dia_hora_extra, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, cal_quinzena, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2, config_window, cal_inicio, cal_fim, mensagem_label3
     
     #Ocultar janela atual
     app.withdraw()
@@ -371,8 +422,8 @@ def abrir_config_horas():
     config_window.title('Configurar Horas')
     config_window.geometry('1200x700')
     
-    # Criar os campos e botão na janela de configuração de horas
-    label_titulo1 = LabelFrame(config_window, text='Adicionar horas extras', font=('Arial', 16, 'bold'))
+    #Criação do Label para adicionar horas extras
+    label_titulo1 = LabelFrame(config_window, text='Adicionar Horas Extras', font=('Arial', 16, 'bold'))
     label_titulo1.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
     
     label_dia = tk.Label(label_titulo1, text='Dia da hora:')
@@ -395,6 +446,7 @@ def abrir_config_horas():
     mensagem_label = tk.Label(config_window, text='')
     mensagem_label.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
     
+    #Criação do Label para adicionar horas BIP
     label_titulo2 = LabelFrame(config_window, text='Adicionar Horas BIP', font=('Arial', 16, 'bold'), labelanchor='n')
     label_titulo2.grid(row=0, column=5, columnspan=6, padx=0, pady=0)
     
@@ -418,10 +470,36 @@ def abrir_config_horas():
     mensagem_label2 = tk.Label(config_window, text='')
     mensagem_label2.grid(row=4, column=5, columnspan=2, padx=20, pady=10)
     
+    #Criação do label para adicionar dias de plantão
+    label_titulo4 = LabelFrame(config_window, text='Adicionar Dias de plantão', font=('Arial', 16, 'bold'), labelanchor='n')
+    label_titulo4.grid(row=0, column=11, columnspan=5, padx=110, pady=0)
+    
+    label_data_ini = tk.Label(label_titulo4, text='Data inicio:') 
+    label_data_ini.grid(row=1, column=11, padx=10, pady=10)
+    
+    cal_inicio = DateEntry(label_titulo4, date_pattern='dd/mm/yyyy', locale='pt_BR')
+    cal_inicio.delete(0, tk.END)
+    cal_inicio.grid(row=1, column=12, padx=10, pady=10)
+    
+    label_data_fim = tk.Label(label_titulo4, text='Data fim:') 
+    label_data_fim.grid(row=2, column=11, padx=10, pady=10)
+    
+    cal_fim = DateEntry(label_titulo4, date_pattern='dd/mm/yyyy', locale='pt_BR')
+    cal_fim.delete(0, tk.END)
+    cal_fim.grid(row=2, column=12, padx=10, pady=10)
+    
+    botao_salvar_dtplantao = tk.Button(label_titulo4, text='Salvar', command=inserir_datas_plantao)
+    botao_salvar_dtplantao.grid(row=3, column=12, padx=0, pady=10)
+    
+    # Label para exibir a mensagem de sucesso
+    mensagem_label3 = tk.Label(config_window, text='')
+    mensagem_label3.grid(row=4, column=13, padx=0, pady=10)
+    
     #Função para limpar a mensagem de sucesso após 5 segundos
     def limpar_mensagem():
         mensagem_label.config(text='')
         mensagem_label2.config(text='')
+        mensagem_label3.config(text='')
         
     config_window.after(5000, limpar_mensagem)
     
@@ -490,8 +568,8 @@ def abrir_config_horas():
         
         config_window.destroy()
         app.deiconify()  # Mostrar a janela principal novamente
-        #app.pack_forget()
         atualizar_qtd_horas_extras()
+        mostrar_calendario()
     
     # Criar o menu na janela de configuração de horas
     menubar_config = tk.Menu(config_window)
@@ -510,6 +588,6 @@ def encerrar_programa():
 menu_principal.add_command(label='Configurar Horas', command=abrir_config_horas)
 
 criar_tabela()
-mostrar_calendario()
 atualizar_qtd_horas_extras()
+mostrar_calendario()
 app.mainloop()
