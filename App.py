@@ -6,6 +6,8 @@ import calendar
 import locale
 import sqlite3
 from tkcalendar import DateEntry
+import requests
+import confs
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -19,6 +21,11 @@ mes_anterior = mes - 1
 #Adicionar zeros a esquerda do hoje e do mes quando necessairo
 mes_formatado = str(mes).zfill(2)
 mes_anterior_formatado = str(mes_anterior).zfill(2)
+
+#Parametros para API
+pais = 'BR'
+chave_api = confs.api_key
+url = f'https://calendarific.com/api/v2/holidays?country={pais}&year={ano}&api_key={chave_api}'
 
 entry_dia = None
 entry_hora = None
@@ -38,6 +45,26 @@ total_horas_semana = 0
 total_horas_sabado = 0
 total_horas_domingo = 0
 total_horas_bip = 0
+valor_total = 0
+
+response = requests.get(url)
+
+if response.status_code == 200:
+    dados = response.json()
+    
+    # Verificar se a resposta contém os feriados
+    if 'response' in dados and 'holidays' in dados['response']:
+        feriados = dados['response']['holidays']
+
+        # Exemplo de exibição dos feriados
+        for feriado in feriados:
+            nome = feriado['name']
+            data = feriado['date']['iso']
+            #print(f'{nome}: {data}')
+    else:
+        print('Nenhum feriado encontrado.')
+else:
+    print('Erro na solicitação.')
 
 def mostrar_calendario():
     global hoje, mes, mes_anterior, resultado5
@@ -120,13 +147,14 @@ app.geometry('1200x700')
 
 # Definir função para atualizar o campo qtd_horas_extras_segsex
 def atualizar_qtd_horas_extras():
-    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior, resultado5
+    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior, resultado5, valor_total
     
     #limpar as variaveis de horas
     total_horas_semana = 0
     total_horas_sabado = 0
     total_horas_domingo = 0
     total_horas_bip = 0
+    valor_total = 0
     
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
@@ -210,15 +238,20 @@ def atualizar_qtd_horas_extras():
     else:
         None
         
+    #Calcular total a receber de acordo com valores ja mostrados na tela
+    valor_total = resultado_bip + resultado_dom + resultado_sab + resultado_segsex
+    valor_total_str = str(valor_total).replace('.', ',')
+    vlr_total.config(text=f'R$ {valor_total_str}')
+        
 #Criar os widgets
 header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
-header_label.grid(row=0, column=0, columnspan=3, padx=140, pady=10, sticky='w')
+header_label.grid(row=0, column=0, columnspan=2, padx=140, pady=10, sticky='w')
 
 calendar_frame = tk.Frame(app)
-calendar_frame.grid(row=1, column=2, padx=10, pady=10, rowspan=8)
+calendar_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=10, rowspan=8, sticky='w')
 
 label_titulo = tk.Label(app, text=f'Valores calculados do dia 16/0{mes_anterior} até o dia 15/0{mes}', font=('Arial', 18, 'bold'))
-label_titulo.grid(row=0, column=3, columnspan=2, sticky='w')
+label_titulo.grid(row=0, column=3, columnspan=2, sticky='w', padx=50)
 
 #Criar um campo de label no canto direito
 label1 = tk.Label(app, text='Qtd horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
@@ -268,6 +301,18 @@ label41.grid(row=8, column=3, padx=70, pady=0, sticky='nw')
 
 vlr_horas_bips = tk.Label(app, font=('Arial', 15))
 vlr_horas_bips.grid(row=8, column=3, columnspan=2, padx=230, sticky='nw')
+
+label51 = tk.Label(app, text='Total a receber:', font=('Arial', 15, 'bold'))
+label51.grid(row=9, column=3, padx=70, sticky='w')
+
+vlr_total = tk.Label(app, font=('Arial', 15))
+vlr_total.grid(row=9, column=3, columnspan=2, padx=230, sticky='w')
+
+bck_lgd_cal = tk.Label(app, bg='purple')
+bck_lgd_cal.grid(row=9, column=0, padx=20, sticky='w')
+
+label_lgd_cal = tk.Label(app, text='Dias de plantão', font=('Arial', 15, 'bold'))
+label_lgd_cal.grid(row=9, column=0, padx=50, pady=30, sticky='w')
 
 #Criar a menu bar
 menubar = Menu(app)
