@@ -57,16 +57,16 @@ if response.status_code == 200:
         feriados = dados['response']['holidays']
 
         # Exemplo de exibição dos feriados
-        for feriado in feriados:
-            nome = feriado['name']
-            data = feriado['date']['iso']
+        #for feriado in feriados:
+            #nome = feriado['name']
+            #data = feriado['date']['iso']
             #print(f'{nome}: {data}')
     else:
         print('Nenhum feriado encontrado.')
 else:
     print('Erro na solicitação.')
 
-def mostrar_calendario():
+def mostrar_calendario(feriados):
     global hoje, mes, mes_anterior, resultado5
     
     #Criar um objeto de calendario
@@ -117,27 +117,34 @@ def mostrar_calendario():
     for week_num, week in enumerate(cal):
         for day_num, day in enumerate(week):
             if week_num == 0 and day_num <= dia_semana_primeiro_dia:
-                # Dias do mês anterior
+                #Dias do mês anterior
                 label = tk.Label(calendar_frame, text=str(dia_mes_anterior).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_mes_anterior += 1
             elif day == 0:
-                # Dias do próximo mês
+                #Dias do próximo mês
                 label = tk.Label(calendar_frame, text=str(dia_proximo_mes).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_proximo_mes += 1
             elif day > num_dias_mes_atual:
-                # Dias adicionais do próximo mês
+                #Dias adicionais do próximo mês
                 label = tk.Label(calendar_frame, text=str(dia_proximo_mes).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
                 dia_proximo_mes += 1
             else:
-                # Dias do mês atual
+                #Dias do mês atual
                 data_obj = datetime(ano, mes, day).date()
+                data_api = datetime(ano, mes, day).date()
+                #Preencher dias de plantão
                 for dia_inicio, dia_fim in datas_plantao:
                     if dia_inicio <= data_obj <= dia_fim:
                         label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', bg='purple')
                         break
-                    else:
-                        label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
-            label.grid(row=week_num+1, column=day_num, sticky='e')
+                        label.grid(row=week_num+1, column=day_num, sticky='e')           
+                    for feriado in feriados:
+                        if data_api == feriado['date']:
+                            label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', bg='red')
+                            break
+                        else:
+                            label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
+            label.grid(row=week_num+1, column=day_num, sticky='e')           
     
 #Tela
 app = tk.Tk()
@@ -242,13 +249,13 @@ def atualizar_qtd_horas_extras():
     valor_total = resultado_bip + resultado_dom + resultado_sab + resultado_segsex
     valor_total_str = str(valor_total).replace('.', ',')
     vlr_total.config(text=f'R$ {valor_total_str}')
-        
+                
 #Criar os widgets
 header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
 header_label.grid(row=0, column=0, columnspan=2, padx=140, pady=10, sticky='w')
 
 calendar_frame = tk.Frame(app)
-calendar_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=10, rowspan=8, sticky='w')
+calendar_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=10, rowspan=8, sticky='w')   
 
 label_titulo = tk.Label(app, text=f'Valores calculados do dia 16/0{mes_anterior} até o dia 15/0{mes}', font=('Arial', 18, 'bold'))
 label_titulo.grid(row=0, column=3, columnspan=2, sticky='w', padx=50)
@@ -634,5 +641,5 @@ menu_principal.add_command(label='Configurar Horas', command=abrir_config_horas)
 
 criar_tabela()
 atualizar_qtd_horas_extras()
-mostrar_calendario()
+mostrar_calendario(feriados)
 app.mainloop()
