@@ -8,6 +8,7 @@ import sqlite3
 from tkcalendar import DateEntry
 import requests
 import confs
+import matplotlib.pyplot as plt
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -353,15 +354,20 @@ def criar_tabela():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     data_inicio DATE,
                     data_fim DATE)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS ganho_mes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    mes_data DATE,
+                    total_mes FLOAT
+    )''')
     conn.commit()
     conn.close()
     
-#Função para converter a data no formato "dd/mm/aaaa" para o formato adequado do SQLite
+#Função para converter a data no formato "dd/mm/aaaa" para o formato adequado do SQLite("aaaa-mm-dd")
 def converter_data(data):
     data_obj = datetime.strptime(data, "%d/%m/%Y")
     data_sqlite = data_obj.strftime("%Y-%m-%d")
     return data_sqlite
-    
+
 #Função para inserir horas extras no banco de dados
 def inserir_horas_extra():
     dia = cal_dia_hora_extra.get()
@@ -433,7 +439,7 @@ def inserir_horas_bip():
     #Chamar função para limpar mensagem de sucesso ou falha
     config_window.after(5000, lambda: mensagem_label2.config(text=''))
 
-#Função para inserir datas de plantão
+#Função para inserir datas de plantão no banco de dados
 def inserir_datas_plantao():
     data_ini_plantao = cal_inicio.get()
     data_fim_plantao = cal_fim.get()
@@ -466,6 +472,33 @@ def inserir_datas_plantao():
     #Chamar função para limpar mensagem de sucesso ou falha
     config_window.after(5000, lambda: mensagem_label3.config(text=''))
     
+def inserir_total_mes():
+    #Pegar a ultima data do mês atual
+    ultimo_dia = calendar.monthrange(ano, mes)[1]       
+
+    #Concatenar a data para salvar no banco de dados
+    data = ultimo_dia + mes + ano
+    
+    valor = valor_total
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    
+    #Verificar se o registro ja existe
+    consulta = ("SELECT * FROM ganho_mes WHERE mes_data = ?")
+    c.execute(consulta, (data))
+    registro = c.fetchone()
+    
+    if registro is None:
+        insercao = ("INSERT INTO ganho_mes (mes_data, total_mes) VALUES (?, ?)")
+        c.execute(insercao, data, valor)
+    elif registro[1] != valor:
+        atualizar = ("UPDATE ganho_mes SET total_mes = ? WHERE data = ?")
+        c.execute(atualizar, (valor, data))
+    
+    conn.commit()
+    conn.close()
+    
 #Função para abrir a tela de configurar horas
 def abrir_config_horas():
     global cal_dia_hora_extra, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, cal_quinzena, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2, config_window, cal_inicio, cal_fim, mensagem_label3
@@ -473,9 +506,10 @@ def abrir_config_horas():
     #Ocultar janela atual
     app.withdraw()
     
-    # Criar uma nova janela
+    #Criar uma nova janela
     config_window = tk.Toplevel(app)
     config_window.title('Configurar Horas')
+    config_window.resizable(False, False)
     config_window.geometry('1200x700')
     
     #Criação do Label para adicionar horas extras
@@ -498,7 +532,7 @@ def abrir_config_horas():
     botao_salvar = tk.Button(label_titulo1, text='Salvar', command=inserir_horas_extra)
     botao_salvar.grid(row=3, column=0, padx=0, pady=10, sticky='e') 
     
-    # Label para exibir a mensagem de sucesso
+    #Label para exibir a mensagem de sucesso
     mensagem_label = tk.Label(config_window, text='')
     mensagem_label.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
     
@@ -522,7 +556,7 @@ def abrir_config_horas():
     botao_salvar_hrbip = tk.Button(label_titulo2, text='Salvar', command=inserir_horas_bip)
     botao_salvar_hrbip.grid(row=3, column=5, columnspan=2, padx=0, pady=10) 
     
-    # Label para exibir a mensagem de sucesso
+    #Label para exibir a mensagem de sucesso
     mensagem_label2 = tk.Label(config_window, text='')
     mensagem_label2.grid(row=4, column=5, columnspan=2, padx=20, pady=10)
     
@@ -547,7 +581,7 @@ def abrir_config_horas():
     botao_salvar_dtplantao = tk.Button(label_titulo4, text='Salvar', command=inserir_datas_plantao)
     botao_salvar_dtplantao.grid(row=3, column=12, padx=0, pady=10)
     
-    # Label para exibir a mensagem de sucesso
+    #Label para exibir a mensagem de sucesso
     mensagem_label3 = tk.Label(config_window, text='')
     mensagem_label3.grid(row=4, column=13, padx=0, pady=10)
     
@@ -646,8 +680,143 @@ def abrir_resultado():
     #Criar uma nova janela
     resultados_window = tk.Toplevel(app)
     resultados_window.title('Resultados dos meses')
-    resultados_window.geometry('1200x700')
-
+    resultados_window.resizable(False, False)
+    resultados_window.geometry('1215x700')
+    
+    #Criação do Label para adicionar horas extras
+    label_titulo4 = tk.Label(resultados_window, text='Valores Recebidos por mês', font=('Arial', 25, 'bold'))
+    label_titulo4.grid(row=0, column=0, columnspan=16, padx=0, pady=10)
+    
+    #Label primeiro mês
+    label_mes1 = LabelFrame(resultados_window, text='1º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes1.grid(row=1, column=0, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes1 = tk.Label(label_mes1, text='Total recebido:')
+    label_vlr_mes1.grid(row=2, column=0, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes1 = tk.Entry(label_mes1, width=5, state='disabled')
+    entry_vlr_mes1.grid(row=2, column=1, padx=5, pady=10, sticky='w')
+    
+    #Label segundo mês
+    label_mes2 = LabelFrame(resultados_window, text='2º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes2.grid(row=1, column=2, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes2 = tk.Label(label_mes2, text='Total recebido:')
+    label_vlr_mes2.grid(row=2, column=2, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes2 = tk.Entry(label_mes2, width=5, state='disabled')
+    entry_vlr_mes2.grid(row=2, column=3, padx=5, pady=10, sticky='w')
+    
+    #Label terceiro mês
+    label_mes3 = LabelFrame(resultados_window, text='3º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes3.grid(row=1, column=4, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes3 = tk.Label(label_mes3, text='Total recebido:')
+    label_vlr_mes3.grid(row=2, column=4, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes3 = tk.Entry(label_mes3, width=5, state='disabled')
+    entry_vlr_mes3.grid(row=2, column=5, padx=5, pady=10, sticky='w')
+    
+    #Label quarto mês
+    label_mes4 = LabelFrame(resultados_window, text='4º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes4.grid(row=1, column=6, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes4 = tk.Label(label_mes4, text='Total recebido:')
+    label_vlr_mes4.grid(row=2, column=6, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes4 = tk.Entry(label_mes4, width=5, state='disabled')
+    entry_vlr_mes4.grid(row=2, column=7, padx=5, pady=10, sticky='w')
+    
+    #Label quinto mês
+    label_mes5 = LabelFrame(resultados_window, text='5º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes5.grid(row=1, column=8, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes5 = tk.Label(label_mes5, text='Total recebido:')
+    label_vlr_mes5.grid(row=2, column=8, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes5 = tk.Entry(label_mes5, width=5, state='disabled')
+    entry_vlr_mes5.grid(row=2, column=9, padx=5, pady=10, sticky='w')
+    
+    #Label sexto mês
+    label_mes6 = LabelFrame(resultados_window, text='6º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes6.grid(row=1, column=10, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes6 = tk.Label(label_mes6, text='Total recebido:')
+    label_vlr_mes6.grid(row=2, column=10, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes6 = tk.Entry(label_mes6, width=5, state='disabled')
+    entry_vlr_mes6.grid(row=2, column=11, padx=5, pady=10, sticky='w')
+    
+    #Label setimo mês
+    label_mes7 = LabelFrame(resultados_window, text='7º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes7.grid(row=1, column=12, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes7 = tk.Label(label_mes7, text='Total recebido:')
+    label_vlr_mes7.grid(row=2, column=12, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes7 = tk.Entry(label_mes7, width=5, state='disabled')
+    entry_vlr_mes7.grid(row=2, column=13, padx=5, pady=10, sticky='w')
+    
+    #Label oitavo mês
+    label_mes8 = LabelFrame(resultados_window, text='8º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes8.grid(row=1, column=14, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes8 = tk.Label(label_mes8, text='Total recebido:')
+    label_vlr_mes8.grid(row=2, column=14, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes8 = tk.Entry(label_mes8, width=5, state='disabled')
+    entry_vlr_mes8.grid(row=2, column=15, padx=5, pady=10, sticky='w')
+    
+    #Label nono mês
+    label_mes9 = LabelFrame(resultados_window, text='9º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes9.grid(row=4, column=1, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes9 = tk.Label(label_mes9, text='Total recebido:')
+    label_vlr_mes9.grid(row=5, column=1, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes9 = tk.Entry(label_mes9, width=5, state='disabled')
+    entry_vlr_mes9.grid(row=5, column=2, padx=5, pady=10, sticky='w')
+    
+    #Label decimo mês
+    label_mes10 = LabelFrame(resultados_window, text='10º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes10.grid(row=4, column=5, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes10 = tk.Label(label_mes10, text='Total recebido:')
+    label_vlr_mes10.grid(row=5, column=5, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes10 = tk.Entry(label_mes10, width=5, state='disabled')
+    entry_vlr_mes10.grid(row=5, column=6, padx=5, pady=10, sticky='w')
+    
+    #Label decimo primero mês
+    label_mes11 = LabelFrame(resultados_window, text='11º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes11.grid(row=4, column=9, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes11 = tk.Label(label_mes11, text='Total recebido:')
+    label_vlr_mes11.grid(row=5, column=9, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes11 = tk.Entry(label_mes11, width=5, state='disabled')
+    entry_vlr_mes11.grid(row=5, column=10, padx=5, pady=10, sticky='w')
+    
+    #Label decimo segundo mês
+    label_mes12 = LabelFrame(resultados_window, text='12º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes12.grid(row=4, column=13, columnspan=2, padx=5, pady=10, sticky='w')
+    
+    label_vlr_mes12 = tk.Label(label_mes12, text='Total recebido:')
+    label_vlr_mes12.grid(row=5, column=13, padx=5, pady=10, sticky='w')
+    
+    entry_vlr_mes12 = tk.Entry(label_mes12, width=5, state='disabled')
+    entry_vlr_mes12.grid(row=5, column=14, padx=5, pady=10, sticky='w')
+    
+    #Criar o menu na janela de configuração de horas
+    menubar_config = tk.Menu(resultados_window)
+    resultados_window.config(menu=menubar_config)
+    
+    #Criar o item de menu "INICIO"
+    menubar_config.add_command(label='INICIO ', command=None)
+    
+    #Configurar o evento para fechar a janela
+    resultados_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
+    
 #Função para fechar o programa
 def encerrar_programa():
     app.quit()
@@ -656,8 +825,8 @@ abrir_inicio()
 
 #Criar os itens do menu    
 #menubar.add_command(label='INICIO', command=None)
-menubar.add_command(label='CONFIGURAR HORAS', command=abrir_config_horas)
-menubar.add_command(label='RESULTADOS', command=abrir_resultado)
+menubar.add_command(label='CONFIGURAR HORAS ', command=abrir_config_horas)
+menubar.add_command(label='RESULTADOS ', command=abrir_resultado)
 menubar.add_command(label='SAIR', command=app.quit)
 
 criar_tabela()
