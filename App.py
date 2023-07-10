@@ -315,11 +315,18 @@ label51.grid(row=9, column=3, padx=70, sticky='w')
 vlr_total = tk.Label(app, font=('Arial', 15))
 vlr_total.grid(row=9, column=3, columnspan=2, padx=230, sticky='w')
 
+#Legendas para o calendario
 bck_lgd_cal = tk.Label(app, bg='purple')
 bck_lgd_cal.grid(row=9, column=0, padx=20, sticky='w')
 
 label_lgd_cal = tk.Label(app, text='Dias de plantão', font=('Arial', 15, 'bold'))
-label_lgd_cal.grid(row=9, column=0, padx=50, pady=30, sticky='w')
+label_lgd_cal.grid(row=9, column=0, padx=50, sticky='w')
+
+bck_lgd_cal = tk.Label(app, bg='red')
+bck_lgd_cal.grid(row=10, column=0, padx=20, sticky='w')
+
+label_lgd_fer = tk.Label(app, text='Feriados no mês', font=('Arial', 15, 'bold'))
+label_lgd_fer.grid(row=10, column=0, padx=50, sticky='w')
 
 #Criar a menu bar
 menubar = Menu(app)
@@ -327,12 +334,8 @@ app.config(menu=menubar)
 
 #Criar o menu
 menu_principal = tk.Menu(menubar, tearoff=0)
-        
-#Criar itens do menu
-menubar.add_cascade(label='MENU', menu=menu_principal)
-menubar.add_command(label='SAIR', command=app.quit)
 
-# Função para criar a tabela no banco de dados
+#Função para criar a tabela no banco de dados
 def criar_tabela():
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
@@ -353,13 +356,13 @@ def criar_tabela():
     conn.commit()
     conn.close()
     
-# Função para converter a data no formato "dd/mm/aaaa" para o formato adequado do SQLite
+#Função para converter a data no formato "dd/mm/aaaa" para o formato adequado do SQLite
 def converter_data(data):
     data_obj = datetime.strptime(data, "%d/%m/%Y")
     data_sqlite = data_obj.strftime("%Y-%m-%d")
     return data_sqlite
     
-# Função para inserir horas extras no banco de dados
+#Função para inserir horas extras no banco de dados
 def inserir_horas_extra():
     dia = cal_dia_hora_extra.get()
     quantidade_horas = entry_quantidade_horas.get()
@@ -430,6 +433,7 @@ def inserir_horas_bip():
     #Chamar função para limpar mensagem de sucesso ou falha
     config_window.after(5000, lambda: mensagem_label2.config(text=''))
 
+#Função para inserir datas de plantão
 def inserir_datas_plantao():
     data_ini_plantao = cal_inicio.get()
     data_fim_plantao = cal_fim.get()
@@ -462,7 +466,7 @@ def inserir_datas_plantao():
     #Chamar função para limpar mensagem de sucesso ou falha
     config_window.after(5000, lambda: mensagem_label3.config(text=''))
     
-# Função para abrir a segunda tela
+#Função para abrir a tela de configurar horas
 def abrir_config_horas():
     global cal_dia_hora_extra, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, cal_quinzena, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2, config_window, cal_inicio, cal_fim, mensagem_label3
     
@@ -555,6 +559,7 @@ def abrir_config_horas():
         
     config_window.after(5000, limpar_mensagem)
     
+    #Função para habilitar/desabilitar edição dos campos
     def toggle_edit_mode():
         global edit_mode
 
@@ -598,17 +603,17 @@ def abrir_config_horas():
     entry_valor_bip.grid(row=11, column=0, columnspan=4, padx=100, pady=10, sticky='w')
     entry_valor_bip.insert(0, float(valor_bip))
   
-    # Criar o botão para editar os campos
+    #Criar o botão para editar os campos
     botao_editar = tk.Button(label_titulo3, text='Editar', command=toggle_edit_mode)
     botao_editar.grid(row=12, column=0, columnspan=2, padx=10, pady=10)    
     
-    # Desabilitar os campos
+    #Desabilitar os campos
     entry_valor_60.config(state='disabled')
     entry_valor_80.config(state='disabled')
     entry_valor_100.config(state='disabled')
     entry_valor_bip.config(state='disabled')
        
-    # Função para voltar à janela principal
+    #Função para voltar à janela principal
     def voltar_janela_principal():
         #global valor_60, valor_80, valor_100, valor_bip
         
@@ -623,21 +628,28 @@ def abrir_config_horas():
         atualizar_qtd_horas_extras()
         mostrar_calendario()
     
-    # Criar o menu na janela de configuração de horas
+    #Criar o menu na janela de configuração de horas
     menubar_config = tk.Menu(config_window)
     config_window.config(menu=menubar_config)
     
-    # Criar o item de menu "Voltar"
-    menubar_config.add_command(label='VOLTAR ', command=voltar_janela_principal)
+    #Criar o item de menu "INICIO"
+    menubar_config.add_command(label='INICIO ', command=voltar_janela_principal)
     
-    # Configurar o evento para fechar a janela
+    #Configurar o evento para fechar a janela
     config_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
-        
+       
+#Função para abrir a tela de resultados        
+def abrir_resultado():
+    None        
+
 def encerrar_programa():
     app.quit()
             
-#Criar o submenu Configurar Horas    
-menu_principal.add_command(label='Configurar Horas', command=abrir_config_horas)
+#Criar os itens do menu    
+#menubar.add_command(label='INICIO', command=None)
+menubar.add_command(label='CONFIGURAR HORAS', command=abrir_config_horas)
+menubar.add_command(label='RESULTADOS', command=abrir_resultado)
+menubar.add_command(label='SAIR', command=app.quit)
 
 criar_tabela()
 atualizar_qtd_horas_extras()
