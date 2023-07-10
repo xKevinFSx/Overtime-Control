@@ -55,17 +55,107 @@ if response.status_code == 200:
     # Verificar se a resposta contém os feriados
     if 'response' in dados and 'holidays' in dados['response']:
         feriados = dados['response']['holidays']
-
-        # Exemplo de exibição dos feriados
-        #for feriado in feriados:
-            #nome = feriado['name']
-            #data = feriado['date']['iso']
-            #print(f'{nome}: {data}')
     else:
         print('Nenhum feriado encontrado.')
 else:
     print('Erro na solicitação.')
 
+#Função para abrir tela de inicio
+def abrir_inicio():
+    global menu_principal, menubar, app, qtd_horas_extras_segsex, qtd_horas_extras_sab, qtd_horas_extras_domfer, qtd_horas_bips, vlr_horas_extras_segsex, vlr_horas_extras_sab, vlr_horas_extras_domfer, vlr_horas_bips, vlr_total, calendar_frame, header_label
+        
+    #Tela
+    app = tk.Tk()
+    app.title('Controle de Horas Extras')
+    app.resizable(False, False)
+    app.geometry('1200x700')
+                    
+    #Criar os widgets
+    header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
+    header_label.grid(row=0, column=0, columnspan=2, padx=140, pady=10, sticky='w')
+
+    calendar_frame = tk.Frame(app)
+    calendar_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=10, rowspan=8, sticky='w')   
+
+    label_titulo = tk.Label(app, text=f'Valores calculados do dia 16/0{mes_anterior} até o dia 15/0{mes}', font=('Arial', 18, 'bold'))
+    label_titulo.grid(row=0, column=3, columnspan=2, sticky='w', padx=50)
+
+    #Campos de informações de qtd de horas e valores
+    label1 = tk.Label(app, text='Qtd horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
+    label1.grid(row=1, column=3, padx=70, pady=0, sticky='sw')
+
+    qtd_horas_extras_segsex = tk.Label(app, font=('Arial', 15))
+    qtd_horas_extras_segsex.grid(row=1, column=3, columnspan=2, padx=410, sticky='sw')
+
+    label12 = tk.Label(app, text='Vlr horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
+    label12.grid(row=2, column=3, padx=70, sticky='nw')
+
+    vlr_horas_extras_segsex = tk.Label(app, font=('Arial', 15))
+    vlr_horas_extras_segsex.grid(row=2, column=3, columnspan=2, padx=410, sticky='nw')
+
+    label2 = tk.Label(app, text='Qtd horas extras sábado:', font=('Arial', 15, 'bold'))
+    label2.grid(row=3, column=3, padx=70, pady=0, sticky='sw')
+
+    qtd_horas_extras_sab = tk.Label(app, font=('Arial', 15))
+    qtd_horas_extras_sab.grid(row=3, column=3, columnspan=2, padx=325, sticky='sw')
+
+    label21 = tk.Label(app, text='Vlr horas extras sábado:', font=('Arial', 15, 'bold'))
+    label21.grid(row=4, column=3, padx=70, pady=0, sticky='nw')
+
+    vlr_horas_extras_sab = tk.Label(app, font=('Arial', 15))
+    vlr_horas_extras_sab.grid(row=4, column=3, columnspan=2, padx=325, sticky='nw')
+
+    label3 = tk.Label(app, text='Qtd horas extras domingo e feriado:', font=('Arial', 15, 'bold'))
+    label3.grid(row=5, column=3, padx=70, pady=0, sticky='sw')
+
+    qtd_horas_extras_domfer = tk.Label(app, font=('Arial', 15))
+    qtd_horas_extras_domfer.grid(row=5, column=3, columnspan=2, padx=425, sticky='sw')
+
+    label31 = tk.Label(app, text='Vlr horas extras domingo e feriado:', font=('Arial', 15, 'bold'))
+    label31.grid(row=6, column=3, padx=70, pady=0, sticky='nw')
+
+    vlr_horas_extras_domfer = tk.Label(app, font=('Arial', 15))
+    vlr_horas_extras_domfer.grid(row=6, column=3, columnspan=2, padx=425, sticky='nw')
+
+    label4 = tk.Label(app, text='Qtd horas BIPs:', font=('Arial', 15, 'bold'))
+    label4.grid(row=7, column=3, padx=70, pady=0, sticky='sw')
+
+    qtd_horas_bips = tk.Label(app, font=('Arial', 15))
+    qtd_horas_bips.grid(row=7, column=3, columnspan=2, padx=230, sticky='sw')
+
+    label41 = tk.Label(app, text='Vlr horas BIPs:', font=('Arial', 15, 'bold'))
+    label41.grid(row=8, column=3, padx=70, pady=0, sticky='nw')
+
+    vlr_horas_bips = tk.Label(app, font=('Arial', 15))
+    vlr_horas_bips.grid(row=8, column=3, columnspan=2, padx=230, sticky='nw')
+
+    label51 = tk.Label(app, text='Total a receber:', font=('Arial', 15, 'bold'))
+    label51.grid(row=9, column=3, padx=70, sticky='w')
+
+    vlr_total = tk.Label(app, font=('Arial', 15))
+    vlr_total.grid(row=9, column=3, columnspan=2, padx=230, sticky='w')
+
+    #Legendas para o calendario
+    bck_lgd_cal = tk.Label(app, bg='purple')
+    bck_lgd_cal.grid(row=9, column=0, padx=20, sticky='w')
+
+    label_lgd_cal = tk.Label(app, text='Dias de plantão', font=('Arial', 15, 'bold'))
+    label_lgd_cal.grid(row=9, column=0, padx=50, sticky='w')
+
+    bck_lgd_cal = tk.Label(app, bg='red')
+    bck_lgd_cal.grid(row=10, column=0, padx=20, sticky='w')
+
+    label_lgd_fer = tk.Label(app, text='Feriados no mês', font=('Arial', 15, 'bold'))
+    label_lgd_fer.grid(row=10, column=0, padx=50, sticky='w')
+
+    #Criar a menu bar
+    menubar = Menu(app)
+    app.config(menu=menubar)
+
+    #Criar o menu
+    menu_principal = tk.Menu(menubar, tearoff=0)
+
+#Função para criar o calendario
 def mostrar_calendario(feriados):
     global hoje, mes, mes_anterior, resultado5
     
@@ -140,21 +230,16 @@ def mostrar_calendario(feriados):
                         label.grid(row=week_num+1, column=day_num, sticky='e')           
                     for feriado in feriados:
                         if data_api == feriado['date']:
-                            label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', bg='red')
+                            label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', fg='red')
                             break
                         else:
                             label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
             label.grid(row=week_num+1, column=day_num, sticky='e')           
-    
-#Tela
-app = tk.Tk()
-app.title('Controle de Horas Extras')
-app.resizable(False, False)
-app.geometry('1200x700')
 
-# Definir função para atualizar o campo qtd_horas_extras_segsex
+#Função para atualizar as quantidades de horas e os valores
 def atualizar_qtd_horas_extras():
     global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior, resultado5, valor_total
+    global qtd_horas_extras_segsex, qtd_horas_extras_sab, qtd_horas_extras_domfer, qtd_horas_bips, vlr_horas_extras_segsex, vlr_horas_extras_sab, vlr_horas_extras_domfer, vlr_horas_bips, vlr_total
     
     #limpar as variaveis de horas
     total_horas_semana = 0
@@ -249,91 +334,6 @@ def atualizar_qtd_horas_extras():
     valor_total = resultado_bip + resultado_dom + resultado_sab + resultado_segsex
     valor_total_str = str(valor_total).replace('.', ',')
     vlr_total.config(text=f'R$ {valor_total_str}')
-                
-#Criar os widgets
-header_label = tk.Label(app, text='', font=('Arial', 30, 'bold'))
-header_label.grid(row=0, column=0, columnspan=2, padx=140, pady=10, sticky='w')
-
-calendar_frame = tk.Frame(app)
-calendar_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=10, rowspan=8, sticky='w')   
-
-label_titulo = tk.Label(app, text=f'Valores calculados do dia 16/0{mes_anterior} até o dia 15/0{mes}', font=('Arial', 18, 'bold'))
-label_titulo.grid(row=0, column=3, columnspan=2, sticky='w', padx=50)
-
-#Criar um campo de label no canto direito
-label1 = tk.Label(app, text='Qtd horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
-label1.grid(row=1, column=3, padx=70, pady=0, sticky='sw')
-
-qtd_horas_extras_segsex = tk.Label(app, font=('Arial', 15))
-qtd_horas_extras_segsex.grid(row=1, column=3, columnspan=2, padx=410, sticky='sw')
-
-label12 = tk.Label(app, text='Vlr horas extras segunda à sexta:', font=('Arial', 15, 'bold'))
-label12.grid(row=2, column=3, padx=70, sticky='nw')
-
-vlr_horas_extras_segsex = tk.Label(app, font=('Arial', 15))
-vlr_horas_extras_segsex.grid(row=2, column=3, columnspan=2, padx=410, sticky='nw')
-
-label2 = tk.Label(app, text='Qtd horas extras sábado:', font=('Arial', 15, 'bold'))
-label2.grid(row=3, column=3, padx=70, pady=0, sticky='sw')
-
-qtd_horas_extras_sab = tk.Label(app, font=('Arial', 15))
-qtd_horas_extras_sab.grid(row=3, column=3, columnspan=2, padx=325, sticky='sw')
-
-label21 = tk.Label(app, text='Vlr horas extras sábado:', font=('Arial', 15, 'bold'))
-label21.grid(row=4, column=3, padx=70, pady=0, sticky='nw')
-
-vlr_horas_extras_sab = tk.Label(app, font=('Arial', 15))
-vlr_horas_extras_sab.grid(row=4, column=3, columnspan=2, padx=325, sticky='nw')
-
-label3 = tk.Label(app, text='Qtd horas extras domingo e feriado:', font=('Arial', 15, 'bold'))
-label3.grid(row=5, column=3, padx=70, pady=0, sticky='sw')
-
-qtd_horas_extras_domfer = tk.Label(app, font=('Arial', 15))
-qtd_horas_extras_domfer.grid(row=5, column=3, columnspan=2, padx=425, sticky='sw')
-
-label31 = tk.Label(app, text='Vlr horas extras domingo e feriado:', font=('Arial', 15, 'bold'))
-label31.grid(row=6, column=3, padx=70, pady=0, sticky='nw')
-
-vlr_horas_extras_domfer = tk.Label(app, font=('Arial', 15))
-vlr_horas_extras_domfer.grid(row=6, column=3, columnspan=2, padx=425, sticky='nw')
-
-label4 = tk.Label(app, text='Qtd horas BIPs:', font=('Arial', 15, 'bold'))
-label4.grid(row=7, column=3, padx=70, pady=0, sticky='sw')
-
-qtd_horas_bips = tk.Label(app, font=('Arial', 15))
-qtd_horas_bips.grid(row=7, column=3, columnspan=2, padx=230, sticky='sw')
-
-label41 = tk.Label(app, text='Vlr horas BIPs:', font=('Arial', 15, 'bold'))
-label41.grid(row=8, column=3, padx=70, pady=0, sticky='nw')
-
-vlr_horas_bips = tk.Label(app, font=('Arial', 15))
-vlr_horas_bips.grid(row=8, column=3, columnspan=2, padx=230, sticky='nw')
-
-label51 = tk.Label(app, text='Total a receber:', font=('Arial', 15, 'bold'))
-label51.grid(row=9, column=3, padx=70, sticky='w')
-
-vlr_total = tk.Label(app, font=('Arial', 15))
-vlr_total.grid(row=9, column=3, columnspan=2, padx=230, sticky='w')
-
-#Legendas para o calendario
-bck_lgd_cal = tk.Label(app, bg='purple')
-bck_lgd_cal.grid(row=9, column=0, padx=20, sticky='w')
-
-label_lgd_cal = tk.Label(app, text='Dias de plantão', font=('Arial', 15, 'bold'))
-label_lgd_cal.grid(row=9, column=0, padx=50, sticky='w')
-
-bck_lgd_cal = tk.Label(app, bg='red')
-bck_lgd_cal.grid(row=10, column=0, padx=20, sticky='w')
-
-label_lgd_fer = tk.Label(app, text='Feriados no mês', font=('Arial', 15, 'bold'))
-label_lgd_fer.grid(row=10, column=0, padx=50, sticky='w')
-
-#Criar a menu bar
-menubar = Menu(app)
-app.config(menu=menubar)
-
-#Criar o menu
-menu_principal = tk.Menu(menubar, tearoff=0)
 
 #Função para criar a tabela no banco de dados
 def criar_tabela():
@@ -640,11 +640,20 @@ def abrir_config_horas():
        
 #Função para abrir a tela de resultados        
 def abrir_resultado():
-    None        
+    #Ocultar janela atual
+    app.withdraw()       
+    
+    #Criar uma nova janela
+    resultados_window = tk.Toplevel(app)
+    resultados_window.title('Resultados dos meses')
+    resultados_window.geometry('1200x700')
 
+#Função para fechar o programa
 def encerrar_programa():
     app.quit()
             
+abrir_inicio()
+
 #Criar os itens do menu    
 #menubar.add_command(label='INICIO', command=None)
 menubar.add_command(label='CONFIGURAR HORAS', command=abrir_config_horas)
