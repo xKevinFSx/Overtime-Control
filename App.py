@@ -14,6 +14,7 @@ locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # Variáveis globais para os campos de entrada
 hoje = date.today()
+dia = hoje.day
 mes = hoje.month
 ano = hoje.year
 
@@ -64,7 +65,7 @@ else:
 #Função para abrir tela de inicio
 def abrir_inicio():
     global menu_principal, menubar, app, qtd_horas_extras_segsex, qtd_horas_extras_sab, qtd_horas_extras_domfer, qtd_horas_bips, vlr_horas_extras_segsex, vlr_horas_extras_sab, vlr_horas_extras_domfer, vlr_horas_bips, vlr_total, calendar_frame, header_label
-        
+    
     #Tela
     app = tk.Tk()
     app.title('Controle de Horas Extras')
@@ -152,6 +153,11 @@ def abrir_inicio():
     #Criar a menu bar
     menubar = Menu(app)
     app.config(menu=menubar)
+    
+    #Criar os itens do menu    
+    menubar.add_command(label='CONFIGURAR HORAS ', command=abrir_config_horas)
+    menubar.add_command(label='RESULTADOS ', command=abrir_resultado)
+    menubar.add_command(label='SAIR', command=app.quit)
 
     #Criar o menu
     menu_principal = tk.Menu(menubar, tearoff=0)
@@ -335,6 +341,9 @@ def atualizar_qtd_horas_extras():
     valor_total = resultado_bip + resultado_dom + resultado_sab + resultado_segsex
     valor_total_str = str(valor_total).replace('.', ',')
     vlr_total.config(text=f'R$ {valor_total_str}')
+    
+    #Chamar função de atualizar valor total no banco de dados
+    inserir_total_mes()
 
 #Função para criar a tabela no banco de dados
 def criar_tabela():
@@ -472,12 +481,16 @@ def inserir_datas_plantao():
     #Chamar função para limpar mensagem de sucesso ou falha
     config_window.after(5000, lambda: mensagem_label3.config(text=''))
     
+#Função para inserir ou atualizar o total ganho no mês atual no banco de dados
 def inserir_total_mes():
     #Pegar a ultima data do mês atual
     ultimo_dia = calendar.monthrange(ano, mes)[1]       
 
     #Concatenar a data para salvar no banco de dados
-    data = ultimo_dia + mes + ano
+    data = str(ultimo_dia) + '/' + str(mes) + '/' + str(ano)
+    
+    #Converter a data para padrão do sqlite
+    data_mes = converter_data(data)
     
     valor = valor_total
     
@@ -486,18 +499,48 @@ def inserir_total_mes():
     
     #Verificar se o registro ja existe
     consulta = ("SELECT * FROM ganho_mes WHERE mes_data = ?")
-    c.execute(consulta, (data))
+    c.execute(consulta, (data_mes,))
     registro = c.fetchone()
     
     if registro is None:
         insercao = ("INSERT INTO ganho_mes (mes_data, total_mes) VALUES (?, ?)")
-        c.execute(insercao, data, valor)
-    elif registro[1] != valor:
+        c.execute(insercao, (data_mes, valor))
+    elif registro[2] != valor:
         atualizar = ("UPDATE ganho_mes SET total_mes = ? WHERE data = ?")
-        c.execute(atualizar, (valor, data))
+        c.execute(atualizar, (valor, data_mes))
     
     conn.commit()
     conn.close()
+    
+def filtrar_valores():
+    data = cal_filtro.get()
+        
+    if data is None or data == '':
+        data_atual = datetime.today()
+        data_filtro = data_atual - timedelta(days=365)
+    else:
+        data_filtro = converter_data(data)
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    
+    consulta = ("SELECT total_mes FROM ganho_mes WHERE mes_data >= ? ORDER BY mes_data ASC LIMIT 12")
+    c.execute(consulta, (data_filtro,))
+    
+    resultados = c.fetchall()
+    
+    entry_vlr_mes = [entry_vlr_mes1, entry_vlr_mes2, entry_vlr_mes3, entry_vlr_mes4, entry_vlr_mes5,
+                     entry_vlr_mes6, entry_vlr_mes7, entry_vlr_mes8, entry_vlr_mes9, entry_vlr_mes10,
+                     entry_vlr_mes11, entry_vlr_mes12]
+    
+    for i, resultado in enumerate(resultados):
+        if i < len(entry_vlr_mes):
+            entry_vlr_mes[i].config(state='normal')
+            entry_vlr_mes[i].delete(0, tk.END)
+            entry_vlr_mes[i].insert(0, resultado[0])
+            entry_vlr_mes[i].config(state='disabled')      
+    
+    conn.close()      
     
 #Função para abrir a tela de configurar horas
 def abrir_config_horas():
@@ -646,34 +689,36 @@ def abrir_config_horas():
     entry_valor_80.config(state='disabled')
     entry_valor_100.config(state='disabled')
     entry_valor_bip.config(state='disabled')
-       
-    #Função para voltar à janela principal
-    def voltar_janela_principal():
-        #global valor_60, valor_80, valor_100, valor_bip
         
-        # Armazenar os valores dos campos
-        valor_60 = entry_valor_60.get()
-        valor_80 = entry_valor_80.get()
-        valor_100 = entry_valor_100.get()
-        valor_bip = entry_valor_bip.get()
-        
-        config_window.destroy()
-        app.deiconify()  # Mostrar a janela principal novamente
-        atualizar_qtd_horas_extras()
-        mostrar_calendario()
-    
+    #Verificar qual botão foi clicado para abrir a nova tela
+    def verificar_click_btn_menu(botao):        
+        if botao == 'INICIO':
+            abrir_inicio()
+            atualizar_qtd_horas_extras()
+            mostrar_calendario(feriados)
+            config_window.destroy()
+        if botao == 'RESULTADO':
+            abrir_resultado()
+            atualizar_qtd_horas_extras()
+            mostrar_calendario(feriados)
+            config_window.destroy()
+            
     #Criar o menu na janela de configuração de horas
     menubar_config = tk.Menu(config_window)
     config_window.config(menu=menubar_config)
     
     #Criar o item de menu "INICIO"
-    menubar_config.add_command(label='INICIO ', command=voltar_janela_principal)
+    menubar_config.add_command(label='INICIO ', command=lambda: verificar_click_btn_menu('INICIO'))
+    menubar_config.add_command(label='RESULTADOS ', command=lambda: verificar_click_btn_menu('RESULTADOS'))
+    menubar_config.add_command(label='SAIR ', command=app.quit)
     
     #Configurar o evento para fechar a janela
     config_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
        
 #Função para abrir a tela de resultados        
 def abrir_resultado():
+    global entry_vlr_mes1, entry_vlr_mes2, entry_vlr_mes3, entry_vlr_mes4, entry_vlr_mes5, entry_vlr_mes6, entry_vlr_mes7, entry_vlr_mes8, entry_vlr_mes9, entry_vlr_mes10, entry_vlr_mes11, entry_vlr_mes12, cal_filtro
+    
     #Ocultar janela atual
     app.withdraw()       
     
@@ -807,12 +852,36 @@ def abrir_resultado():
     entry_vlr_mes12 = tk.Entry(label_mes12, width=5, state='disabled')
     entry_vlr_mes12.grid(row=5, column=14, padx=5, pady=10, sticky='w')
     
+    #Criação do calendario para selecionar data de filtro
+    cal_filtro = DateEntry(resultados_window, date_pattern='dd/mm/yyyy', locale='pt_BR')
+    cal_filtro.delete(0, tk.END)
+    cal_filtro.grid(row=7, column=0, padx=10, pady=10, sticky='w')
+    
+    #Botão para filtrar de acordo com a data
+    btn_filtrar = tk.Button(resultados_window, text='Filtrar', command=filtrar_valores)
+    btn_filtrar.grid(row=7, column=1, padx=0, pady=0, sticky='w')
+    
+    #Verificar qual botão foi clicado para abrir a nova tela
+    def verificar_click_btn_menu(botao):        
+        if botao == 'INICIO':
+            abrir_inicio()
+            atualizar_qtd_horas_extras()
+            mostrar_calendario(feriados)
+            resultados_window.destroy()
+        if botao == 'CONFIGURAR HORAS':
+            abrir_config_horas()
+            atualizar_qtd_horas_extras()
+            mostrar_calendario(feriados)
+            resultados_window.destroy()
+    
     #Criar o menu na janela de configuração de horas
-    menubar_config = tk.Menu(resultados_window)
+    menubar_config = tk.Menu(resultados_window, font=('Arial', 20, 'bold'))
     resultados_window.config(menu=menubar_config)
     
     #Criar o item de menu "INICIO"
-    menubar_config.add_command(label='INICIO ', command=None)
+    menubar_config.add_command(label='INICIO ', command=lambda: verificar_click_btn_menu('INICIO'))
+    menubar_config.add_command(label='CONFIGURAR HORAS ', command=lambda: verificar_click_btn_menu('CONFIGURAR HORAS'))
+    menubar_config.add_command(label='SAIR ', command=app.quit)
     
     #Configurar o evento para fechar a janela
     resultados_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
@@ -822,13 +891,6 @@ def encerrar_programa():
     app.quit()
             
 abrir_inicio()
-
-#Criar os itens do menu    
-#menubar.add_command(label='INICIO', command=None)
-menubar.add_command(label='CONFIGURAR HORAS ', command=abrir_config_horas)
-menubar.add_command(label='RESULTADOS ', command=abrir_resultado)
-menubar.add_command(label='SAIR', command=app.quit)
-
 criar_tabela()
 atualizar_qtd_horas_extras()
 mostrar_calendario(feriados)
