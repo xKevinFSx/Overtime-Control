@@ -366,8 +366,8 @@ def criar_tabela():
     c.execute('''CREATE TABLE IF NOT EXISTS ganho_mes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     mes_data DATE,
-                    total_mes FLOAT
-    )''')
+                    total_mes FLOAT,
+                    dsr_mes FLOAT)''')
     conn.commit()
     conn.close()
     
@@ -512,6 +512,7 @@ def inserir_total_mes():
     conn.commit()
     conn.close()
     
+#Função para filtrar os valores a apartir da data selecionada
 def filtrar_valores():
     data = cal_filtro.get()
         
@@ -529,16 +530,19 @@ def filtrar_valores():
     
     resultados = c.fetchall()
     
-    entry_vlr_mes = [entry_vlr_mes1, entry_vlr_mes2, entry_vlr_mes3, entry_vlr_mes4, entry_vlr_mes5,
-                     entry_vlr_mes6, entry_vlr_mes7, entry_vlr_mes8, entry_vlr_mes9, entry_vlr_mes10,
-                     entry_vlr_mes11, entry_vlr_mes12]
+    labels_vlr_mes = [vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5,
+               vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10,
+               vlr_mes11, vlr_mes12]
     
+    #Atualiza o valor do Label com o valor obtido do banco de dados
     for i, resultado in enumerate(resultados):
-        if i < len(entry_vlr_mes):
-            entry_vlr_mes[i].config(state='normal')
-            entry_vlr_mes[i].delete(0, tk.END)
-            entry_vlr_mes[i].insert(0, resultado[0])
-            entry_vlr_mes[i].config(state='disabled')      
+        if i < len(labels_vlr_mes):
+            labels_vlr_mes_str = str(resultado[0]).replace('.', ',')
+            labels_vlr_mes[i].config(text=f'R$ {labels_vlr_mes_str}')
+    
+    #Caso tenham menos de 12 registros, limpa os demais Labels
+    for i in range(len(resultados), 12):
+        labels_vlr_mes[i].config(text='')
     
     conn.close()      
     
@@ -717,7 +721,7 @@ def abrir_config_horas():
        
 #Função para abrir a tela de resultados        
 def abrir_resultado():
-    global entry_vlr_mes1, entry_vlr_mes2, entry_vlr_mes3, entry_vlr_mes4, entry_vlr_mes5, entry_vlr_mes6, entry_vlr_mes7, entry_vlr_mes8, entry_vlr_mes9, entry_vlr_mes10, entry_vlr_mes11, entry_vlr_mes12, cal_filtro
+    global vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5, vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10, vlr_mes11, vlr_mes12, cal_filtro
     
     #Ocultar janela atual
     app.withdraw()       
@@ -726,131 +730,131 @@ def abrir_resultado():
     resultados_window = tk.Toplevel(app)
     resultados_window.title('Resultados dos meses')
     resultados_window.resizable(False, False)
-    resultados_window.geometry('1215x700')
+    resultados_window.geometry('1200x700')
     
     #Criação do Label para adicionar horas extras
-    label_titulo4 = tk.Label(resultados_window, text='Valores Recebidos por mês', font=('Arial', 25, 'bold'))
+    label_titulo4 = tk.Label(resultados_window, text='Valores Recebidos Por Mês', font=('Arial', 25, 'bold'))
     label_titulo4.grid(row=0, column=0, columnspan=16, padx=0, pady=10)
     
     #Label primeiro mês
     label_mes1 = LabelFrame(resultados_window, text='1º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes1.grid(row=1, column=0, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes1.grid(row=1, column=0, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes1 = tk.Label(label_mes1, text='Total recebido:')
-    label_vlr_mes1.grid(row=2, column=0, padx=5, pady=10, sticky='w')
+    label_vlr_mes1.grid(row=2, column=0, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes1 = tk.Entry(label_mes1, width=5, state='disabled')
-    entry_vlr_mes1.grid(row=2, column=1, padx=5, pady=10, sticky='w')
+    vlr_mes1 = tk.Label(label_mes1, width=9, state='disabled')
+    vlr_mes1.grid(row=2, column=1, padx=2, pady=10, sticky='w')
     
     #Label segundo mês
     label_mes2 = LabelFrame(resultados_window, text='2º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes2.grid(row=1, column=2, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes2.grid(row=1, column=2, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes2 = tk.Label(label_mes2, text='Total recebido:')
-    label_vlr_mes2.grid(row=2, column=2, padx=5, pady=10, sticky='w')
+    label_vlr_mes2.grid(row=2, column=2, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes2 = tk.Entry(label_mes2, width=5, state='disabled')
-    entry_vlr_mes2.grid(row=2, column=3, padx=5, pady=10, sticky='w')
+    vlr_mes2 = tk.Label(label_mes2, width=9, state='disabled')
+    vlr_mes2.grid(row=2, column=3, padx=2, pady=10, sticky='w')
     
     #Label terceiro mês
     label_mes3 = LabelFrame(resultados_window, text='3º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes3.grid(row=1, column=4, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes3.grid(row=1, column=4, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes3 = tk.Label(label_mes3, text='Total recebido:')
-    label_vlr_mes3.grid(row=2, column=4, padx=5, pady=10, sticky='w')
+    label_vlr_mes3.grid(row=2, column=4, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes3 = tk.Entry(label_mes3, width=5, state='disabled')
-    entry_vlr_mes3.grid(row=2, column=5, padx=5, pady=10, sticky='w')
+    vlr_mes3 = tk.Label(label_mes3, width=9, state='disabled')
+    vlr_mes3.grid(row=2, column=5, padx=2, pady=10, sticky='w')
     
     #Label quarto mês
     label_mes4 = LabelFrame(resultados_window, text='4º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes4.grid(row=1, column=6, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes4.grid(row=1, column=6, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes4 = tk.Label(label_mes4, text='Total recebido:')
-    label_vlr_mes4.grid(row=2, column=6, padx=5, pady=10, sticky='w')
+    label_vlr_mes4.grid(row=2, column=6, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes4 = tk.Entry(label_mes4, width=5, state='disabled')
-    entry_vlr_mes4.grid(row=2, column=7, padx=5, pady=10, sticky='w')
+    vlr_mes4 = tk.Label(label_mes4, width=9, state='disabled')
+    vlr_mes4.grid(row=2, column=7, padx=2, pady=10, sticky='w')
     
     #Label quinto mês
     label_mes5 = LabelFrame(resultados_window, text='5º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes5.grid(row=1, column=8, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes5.grid(row=1, column=8, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes5 = tk.Label(label_mes5, text='Total recebido:')
-    label_vlr_mes5.grid(row=2, column=8, padx=5, pady=10, sticky='w')
+    label_vlr_mes5.grid(row=2, column=8, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes5 = tk.Entry(label_mes5, width=5, state='disabled')
-    entry_vlr_mes5.grid(row=2, column=9, padx=5, pady=10, sticky='w')
+    vlr_mes5 = tk.Label(label_mes5, width=9, state='disabled')
+    vlr_mes5.grid(row=2, column=9, padx=2, pady=10, sticky='w')
     
     #Label sexto mês
     label_mes6 = LabelFrame(resultados_window, text='6º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes6.grid(row=1, column=10, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes6.grid(row=1, column=10, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes6 = tk.Label(label_mes6, text='Total recebido:')
-    label_vlr_mes6.grid(row=2, column=10, padx=5, pady=10, sticky='w')
+    label_vlr_mes6.grid(row=2, column=10, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes6 = tk.Entry(label_mes6, width=5, state='disabled')
-    entry_vlr_mes6.grid(row=2, column=11, padx=5, pady=10, sticky='w')
+    vlr_mes6 = tk.Label(label_mes6, width=9, state='disabled')
+    vlr_mes6.grid(row=2, column=11, padx=2, pady=10, sticky='w')
     
     #Label setimo mês
     label_mes7 = LabelFrame(resultados_window, text='7º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes7.grid(row=1, column=12, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes7.grid(row=4, column=0, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes7 = tk.Label(label_mes7, text='Total recebido:')
-    label_vlr_mes7.grid(row=2, column=12, padx=5, pady=10, sticky='w')
+    label_vlr_mes7.grid(row=5, column=0, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes7 = tk.Entry(label_mes7, width=5, state='disabled')
-    entry_vlr_mes7.grid(row=2, column=13, padx=5, pady=10, sticky='w')
+    vlr_mes7 = tk.Label(label_mes7, width=9, state='disabled')
+    vlr_mes7.grid(row=5, column=1, padx=2, pady=10, sticky='w')
     
     #Label oitavo mês
     label_mes8 = LabelFrame(resultados_window, text='8º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes8.grid(row=1, column=14, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes8.grid(row=4, column=2, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes8 = tk.Label(label_mes8, text='Total recebido:')
-    label_vlr_mes8.grid(row=2, column=14, padx=5, pady=10, sticky='w')
+    label_vlr_mes8.grid(row=5, column=2, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes8 = tk.Entry(label_mes8, width=5, state='disabled')
-    entry_vlr_mes8.grid(row=2, column=15, padx=5, pady=10, sticky='w')
+    vlr_mes8 = tk.Label(label_mes8, width=9, state='disabled')
+    vlr_mes8.grid(row=5, column=3, padx=2, pady=10, sticky='w')
     
     #Label nono mês
     label_mes9 = LabelFrame(resultados_window, text='9º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes9.grid(row=4, column=1, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes9.grid(row=4, column=4, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes9 = tk.Label(label_mes9, text='Total recebido:')
-    label_vlr_mes9.grid(row=5, column=1, padx=5, pady=10, sticky='w')
+    label_vlr_mes9.grid(row=5, column=4, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes9 = tk.Entry(label_mes9, width=5, state='disabled')
-    entry_vlr_mes9.grid(row=5, column=2, padx=5, pady=10, sticky='w')
+    vlr_mes9 = tk.Label(label_mes9, width=9, state='disabled')
+    vlr_mes9.grid(row=5, column=5, padx=2, pady=10, sticky='w')
     
     #Label decimo mês
     label_mes10 = LabelFrame(resultados_window, text='10º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes10.grid(row=4, column=5, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes10.grid(row=4, column=6, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes10 = tk.Label(label_mes10, text='Total recebido:')
-    label_vlr_mes10.grid(row=5, column=5, padx=5, pady=10, sticky='w')
+    label_vlr_mes10.grid(row=5, column=6, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes10 = tk.Entry(label_mes10, width=5, state='disabled')
-    entry_vlr_mes10.grid(row=5, column=6, padx=5, pady=10, sticky='w')
+    vlr_mes10 = tk.Label(label_mes10, width=9, state='disabled')
+    vlr_mes10.grid(row=5, column=7, padx=2, pady=10, sticky='w')
     
     #Label decimo primero mês
     label_mes11 = LabelFrame(resultados_window, text='11º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes11.grid(row=4, column=9, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes11.grid(row=4, column=8, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes11 = tk.Label(label_mes11, text='Total recebido:')
-    label_vlr_mes11.grid(row=5, column=9, padx=5, pady=10, sticky='w')
+    label_vlr_mes11.grid(row=5, column=8, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes11 = tk.Entry(label_mes11, width=5, state='disabled')
-    entry_vlr_mes11.grid(row=5, column=10, padx=5, pady=10, sticky='w')
+    vlr_mes11 = tk.Label(label_mes11, width=9, state='disabled')
+    vlr_mes11.grid(row=5, column=9, padx=2, pady=10, sticky='w')
     
     #Label decimo segundo mês
     label_mes12 = LabelFrame(resultados_window, text='12º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
-    label_mes12.grid(row=4, column=13, columnspan=2, padx=5, pady=10, sticky='w')
+    label_mes12.grid(row=4, column=10, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes12 = tk.Label(label_mes12, text='Total recebido:')
-    label_vlr_mes12.grid(row=5, column=13, padx=5, pady=10, sticky='w')
+    label_vlr_mes12.grid(row=5, column=10, padx=2, pady=10, sticky='w')
     
-    entry_vlr_mes12 = tk.Entry(label_mes12, width=5, state='disabled')
-    entry_vlr_mes12.grid(row=5, column=14, padx=5, pady=10, sticky='w')
+    vlr_mes12 = tk.Label(label_mes12, width=9, state='disabled')
+    vlr_mes12.grid(row=5, column=11, padx=2, pady=10, sticky='w')
     
     #Criação do calendario para selecionar data de filtro
     cal_filtro = DateEntry(resultados_window, date_pattern='dd/mm/yyyy', locale='pt_BR')
