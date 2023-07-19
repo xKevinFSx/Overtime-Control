@@ -311,35 +311,40 @@ def atualizar_qtd_horas_extras():
     
     if valor_60 is not None:
         resultado_segsex = total_horas_semana * valor_60
-        resultado_segsex_str = str(resultado_segsex).replace('.', ',')
+        resultado_segsex_decimal = '{:.2f}'.format(resultado_segsex) #Deixar somente com 2 casas decimais e arredontar 
+        resultado_segsex_str = str(resultado_segsex_decimal).replace('.', ',')
         vlr_horas_extras_segsex.config(text=f"R$ {resultado_segsex_str}")
     else:
         None
     
     if valor_80 is not None:
         resultado_sab = total_horas_sabado * valor_80
-        resultado_sab_str = str(resultado_sab).replace('.', ',')
+        resultado_sab_decimal = '{:.2f}'.format(resultado_sab) #Deixar somente com 2 casas decimais e arredontar 
+        resultado_sab_str = str(resultado_sab_decimal).replace('.', ',')
         vlr_horas_extras_sab.config(text=f"R$ {resultado_sab_str}")
     else:
         None
         
     if valor_100 is not None:
         resultado_dom = total_horas_domingo * valor_100
-        resultado_dom_str = str(resultado_dom).replace('.', ',')
+        resultado_dom_format = '{:.2f}'.format(resultado_dom) #Deixar somente com 2 casas decimais e arredontar
+        resultado_dom_str = str(resultado_dom_format).replace('.', ',')
         vlr_horas_extras_domfer.config(text=f"R$ {resultado_dom_str}")
     else:
         None
         
     if valor_bip is not None:
         resultado_bip = total_horas_bip * valor_bip
-        resultado_bip_str = str(resultado_bip).replace('.', ',')
+        resultado_bip_decimal = '{:.2f}'.format(resultado_bip) #Deixar somente com 2 casas decimais e arredontar 
+        resultado_bip_str = str(resultado_bip_decimal).replace('.', ',')
         vlr_horas_bips.config(text=f"R$ {resultado_bip_str}")
     else:
         None
         
     #Calcular total a receber de acordo com valores ja mostrados na tela
     valor_total = resultado_bip + resultado_dom + resultado_sab + resultado_segsex
-    valor_total_str = str(valor_total).replace('.', ',')
+    valor_total_decimal = '{:.2f}'.format(valor_total) #Deixar somente com 2 casas decimais e arredontar
+    valor_total_str = str(valor_total_decimal).replace('.', ',')
     vlr_total.config(text=f'R$ {valor_total_str}')
     
     #Chamar função de atualizar valor total no banco de dados
@@ -506,7 +511,7 @@ def inserir_total_mes():
         insercao = ("INSERT INTO ganho_mes (mes_data, total_mes) VALUES (?, ?)")
         c.execute(insercao, (data_mes, valor))
     elif registro[2] != valor:
-        atualizar = ("UPDATE ganho_mes SET total_mes = ? WHERE data = ?")
+        atualizar = ("UPDATE ganho_mes SET total_mes = ? WHERE mes_data = ?")
         c.execute(atualizar, (valor, data_mes))
     
     conn.commit()
@@ -531,8 +536,8 @@ def filtrar_valores():
     resultados = c.fetchall()
     
     labels_vlr_mes = [vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5,
-               vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10,
-               vlr_mes11, vlr_mes12]
+                      vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10,
+                      vlr_mes11, vlr_mes12]
     
     #Atualiza o valor do Label com o valor obtido do banco de dados
     for i, resultado in enumerate(resultados):
@@ -544,7 +549,7 @@ def filtrar_valores():
     for i in range(len(resultados), 12):
         labels_vlr_mes[i].config(text='')
     
-    conn.close()      
+    conn.close()
     
 #Função para abrir a tela de configurar horas
 def abrir_config_horas():
@@ -734,7 +739,7 @@ def abrir_resultado():
     
     #Criação do Label para adicionar horas extras
     label_titulo4 = tk.Label(resultados_window, text='Valores Recebidos Por Mês', font=('Arial', 25, 'bold'))
-    label_titulo4.grid(row=0, column=0, columnspan=16, padx=0, pady=10)
+    label_titulo4.grid(row=0, column=0, columnspan=10, padx=0, pady=10)
     
     #Label primeiro mês
     label_mes1 = LabelFrame(resultados_window, text='1º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
