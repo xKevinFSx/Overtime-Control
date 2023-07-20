@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import *
+from tkinter import messagebox
 from tkinter import ttk
 from datetime import date, datetime, timedelta
 import calendar
@@ -9,6 +10,7 @@ from tkcalendar import DateEntry
 import requests
 import confs
 import matplotlib.pyplot as plt
+import pickle
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -359,7 +361,6 @@ def criar_tabela():
                     data DATE,
                     quantidade_horas INTEGER,
                     dia_semana TEXT)''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS horas_bip (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     data_fim DATE,
@@ -373,6 +374,10 @@ def criar_tabela():
                     mes_data DATE,
                     total_mes FLOAT,
                     dsr_mes FLOAT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS salario (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    vlr_salario FLOAT,
+                    qtd_horas_trab INT)''')
     conn.commit()
     conn.close()
     
@@ -530,7 +535,7 @@ def filtrar_valores():
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
     
-    consulta = ("SELECT total_mes FROM ganho_mes WHERE mes_data >= ? ORDER BY mes_data ASC LIMIT 12")
+    consulta = ("SELECT total_mes, mes_data FROM ganho_mes WHERE mes_data >= ? ORDER BY mes_data ASC LIMIT 12")
     c.execute(consulta, (data_filtro,))
     
     resultados = c.fetchall()
@@ -539,21 +544,68 @@ def filtrar_valores():
                       vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10,
                       vlr_mes11, vlr_mes12]
     
+    labels_nome_mes = [label_mes1, label_mes2, label_mes3, label_mes4, 
+                       label_mes5, label_mes6, label_mes7, label_mes8, 
+                       label_mes9, label_mes10, label_mes10, label_mes11, 
+                       label_mes12]
+    
     #Atualiza o valor do Label com o valor obtido do banco de dados
     for i, resultado in enumerate(resultados):
         if i < len(labels_vlr_mes):
             labels_vlr_mes_str = str(resultado[0]).replace('.', ',')
             labels_vlr_mes[i].config(text=f'R$ {labels_vlr_mes_str}')
+            
+            #Extrair mês e ano das datas e preencher no frame
+            mes_data = datetime.strptime(resultado[1], '%Y-%m-%d') #convertar string para date
+            nome_mes = mes_data.strftime('%B').capitalize()
+            ano = mes_data.year
+            labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')        
     
     #Caso tenham menos de 12 registros, limpa os demais Labels
     for i in range(len(resultados), 12):
         labels_vlr_mes[i].config(text='')
+        labels_nome_mes[i].config(text='')
     
     conn.close()
     
+#Função para salvar os valores do salario e sempre que entrar na tela estar com ele
+def salvar_valores():
+    #Obter os valores dos campos de entrada
+    salario = entry_salario.get()
+    horas_trabalhadas = entry_horas.get()
+
+    #Serializar e salvar os valores em um arquivo
+    with open("valores_salarios.pickle", "wb") as file:
+        pickle.dump({"salario": salario, "horas_trabalhadas": horas_trabalhadas}, file)
+    
+#Função para carregar os valores salvar no arquivo
+def carregar_valores():
+    try:
+        #Carregar os valores do arquivo, se existir
+        with open("valores_salarios.pickle", "rb") as file:
+            valores = pickle.load(file)
+            salario = valores["salario"]
+            horas_trabalhadas = valores["horas_trabalhadas"]
+
+            # Exibir os valores nos campos de entrada
+            entry_salario.config(state='normal')
+            entry_salario.delete(0, tk.END)
+            entry_salario.insert(0, salario)
+            entry_salario.config(state='disabled')
+
+            entry_horas.config(state='normal')
+            entry_horas.delete(0, tk.END)
+            entry_horas.insert(0, horas_trabalhadas)
+            entry_horas.config(state='disabled')
+
+    except FileNotFoundError:
+        #Se o arquivo não existir (primeira execução), não faz nada
+        pass
+
 #Função para abrir a tela de configurar horas
 def abrir_config_horas():
     global cal_dia_hora_extra, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, cal_quinzena, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2, config_window, cal_inicio, cal_fim, mensagem_label3
+    global entry_salario, entry_horas
     
     #Ocultar janela atual
     app.withdraw()
@@ -644,60 +696,193 @@ def abrir_config_horas():
         mensagem_label3.config(text='')
         
     config_window.after(5000, limpar_mensagem)
-    
-    #Função para habilitar/desabilitar edição dos campos
-    def toggle_edit_mode():
-        global edit_mode
-
-        # Inverter o valor da variável de controle
-        edit_mode = not edit_mode
-
-        # Habilitar/desabilitar a edição dos campos
-        entry_valor_60.config(state='normal' if edit_mode else 'disabled')
-        entry_valor_80.config(state='normal' if edit_mode else 'disabled')
-        entry_valor_100.config(state='normal' if edit_mode else 'disabled')
-        entry_valor_bip.config(state='normal' if edit_mode else 'disabled')
-    
-    label_titulo3 = LabelFrame(config_window, text='Configurar valor de horas extras', font=('Arial', 16, 'bold'))
-    label_titulo3.grid(row=7, column=0, columnspan=5, padx=10, pady=10)
-    
-    label_valor_60 = tk.Label(label_titulo3, text='Valor Hora Extra 60%(Segunda a sexta):')
-    label_valor_60.grid(row=8, column=0, columnspan=4, padx=10, pady=10, sticky='w')
-    
-    entry_valor_60 = tk.Entry(label_titulo3, width=5, state='normal')
-    entry_valor_60.grid(row=8, column=0, columnspan=2, padx=135, pady=10, sticky='e')
-    entry_valor_60.insert(0, float(valor_60))
         
-    label_valor_80 = tk.Label(label_titulo3, text='Valor Hora Extra 80%(Sabado):')
-    label_valor_80.grid(row=9, column=0, columnspan=4, padx=10, pady=10, sticky='w')
+    #Função para cadastrar novo salario no banco de dados
+    def pop_cadastro():
+        # Criar a janela de diálogo
+        popup_cadastro = tk.Toplevel(config_window)
+        popup_cadastro.title('Cadastro de Salário e Horas')
+        popup_cadastro.resizable(False, False)
+
+        # Label e entry para o salário
+        label_salario_cad = tk.Label(popup_cadastro, text='Salário mensal:')
+        label_salario_cad.grid(row=0, column=0, padx=10, pady=5)
+
+        entry_salario_cad = tk.Entry(popup_cadastro, width=10)
+        entry_salario_cad.grid(row=0, column=1, padx=10, pady=5)
+
+        # Label para horas fixas
+        label_horas_cad = tk.Label(popup_cadastro, text='Horas trabalhadas no mês:')
+        label_horas_cad.grid(row=1, column=0, padx=10, pady=5)
+
+        entry_horas_fixas = tk.Label(popup_cadastro, text='220', state='disabled')
+        entry_horas_fixas.grid(row=1, column=1, padx=10, pady=5)
     
-    entry_valor_80 = tk.Entry(label_titulo3, width=5, state='normal')
-    entry_valor_80.grid(row=9, column=1, padx=10, pady=10)
-    entry_valor_80.insert(0, float(valor_80))
+        def salvar_cadastro():
+            salario = entry_salario_cad.get()
+            
+            #Verifica se o valor digitado é numérico
+            if salario.replace('.', '', 1).isdigit():
+                salario_float = float(salario)
+                conn = sqlite3.connect('horas.db')
+                c = conn.cursor()
+                
+                #Verifica se já existe registro na tabela "salario"
+                c.execute("SELECT * FROM salario")
+                if c.fetchone() is not None:
+                    #Caso exista, atualiza o valor do salário
+                    c.execute("UPDATE salario SET vlr_salario = ?, qtd_horas_trab = 220", (salario_float,))
+                else:
+                    #Caso não exista, insere o valor do salário
+                    c.execute("INSERT INTO salario (vlr_salario, qtd_horas_trab) VALUES (?, 220)", (salario_float,))
+                conn.commit()
+                conn.close()
+                popup_cadastro.destroy()
+            else:
+                # Mostra mensagem de erro caso o valor digitado não seja numérico
+                tk.messagebox.showerror('Erro', 'Por favor, digite um valor numérico para o salário, com o padrão 0000.00.')
+
+        # Botão para salvar os dados digitados
+        botao_salvar_cad = tk.Button(popup_cadastro, text='Salvar', command=salvar_cadastro)
+        botao_salvar_cad.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
     
-    label_valor_100 = tk.Label(label_titulo3, text='Valor Hora Extra 100%(Domingo e feriado):')
-    label_valor_100.grid(row=10, column=0, columnspan=4, padx=10, pady=10,  sticky='w')
+    #Função para selecionar o salario
+    def popup_selecionar_salarios():
+        
+        #Criar a janela de diálogo
+        popup_salarios = tk.Toplevel(config_window)
+        popup_salarios.title('Selecionar Salário')
+        popup_salarios.resizable(False, False)
+
+        #Criar o widget Listbox para mostrar os salários
+        lista_salarios = tk.Listbox(popup_salarios, selectmode=tk.SINGLE, exportselection=False)
+        lista_salarios.grid(row=0, column=0, padx=10, pady=10)
+        
+        #Função para preencher o Listbox com os salários cadastrados
+        def preencher_lista_salarios():
+            conn = sqlite3.connect('horas.db')
+            c = conn.cursor()
+
+            #Obter os valores cadastrados na tabela "salario"
+            c.execute("SELECT vlr_salario FROM salario")
+            valores_cadastrados = c.fetchall()
+
+            conn.close()
+
+            #Adicionar os valores cadastrados ao Listbox
+            for valor in valores_cadastrados:
+                lista_salarios.insert(tk.END, valor[0])
+
+        #Chamar a função para preencher a lista de salários ao abrir a janela
+        preencher_lista_salarios()
     
-    entry_valor_100 = tk.Entry(label_titulo3, width=5, state='normal')
-    entry_valor_100.grid(row=10, column=1, padx=50, pady=10)
-    entry_valor_100.insert(0, float(valor_100))
+        #Função para selecionar o salário e atualizar o entry_salario
+        def selecionar_salario():
+            #Obter o valor selecionado pelo usuário no Listbox
+            salario_selecionado = lista_salarios.get(lista_salarios.curselection())
+            
+            salario_formatado = f'R$ {salario_selecionado:.2f}'
+
+            #Atualizar o campo de entrada (entry_salario) com o valor selecionado
+            entry_salario.config(state='normal')
+            entry_salario.delete(0, tk.END)
+            entry_salario.insert(0, str(salario_formatado).replace('.', ','))
+            entry_salario.config(state='disabled')
+            
+            #Atualizar o campo de entrada (entry_horas) com o valor de 220
+            entry_horas.config(state='normal')
+            entry_horas.delete(0, tk.END)
+            entry_horas.insert(0, '220')
+            entry_horas.config(state='disabled')
+            
+            #Fechar a janela de diálogo
+            popup_salarios.destroy()
+
+        #Botão para selecionar o salário e chamar a função selecionar_salario
+        botao_selecionar_salario = tk.Button(popup_salarios, text='Selecionar', command=selecionar_salario)
+        botao_selecionar_salario.grid(row=1, column=0, padx=10, pady=10)
+        
+        salvar_valores()
     
-    label_valor_bip = tk.Label(label_titulo3, text='Valor Hora BIP:')
-    label_valor_bip.grid(row=11, column=0, columnspan=4, padx=10, pady=10,  sticky='w')
+    #Frame de configurar valores
+    label_titulo3 = LabelFrame(config_window, text='Configurar Valores', font=('Arial', 16, 'bold'), labelanchor='n')
+    label_titulo3.grid(row=7, column=0, columnspan=5, padx=5, pady=10)
     
-    entry_valor_bip = tk.Entry(label_titulo3, width=5, state='normal')
-    entry_valor_bip.grid(row=11, column=0, columnspan=4, padx=100, pady=10, sticky='w')
-    entry_valor_bip.insert(0, float(valor_bip))
+    label_salario = tk.Label(label_titulo3, text='Salário mensal:')
+    label_salario.grid(row=8, column=0, padx=5, pady=5, sticky='w')
+    
+    entry_salario = tk.Entry(label_titulo3, width=10, state='disabled')
+    entry_salario.grid(row=8, column=0, padx=0, pady=5, sticky='e')
+    
+    label_horas = tk.Label(label_titulo3, text='Horas trabalhadas no mês:')
+    label_horas.grid(row=9, column=0, padx=5, pady=5, sticky='w')
+    
+    entry_horas = tk.Entry(label_titulo3, width=4, state='disabled')
+    entry_horas.grid(row=9, column=1, padx=0, pady=5, sticky='w')
+    
+    #Carregar, se houver, valores no arquivo
+    carregar_valores()
+    
+    salario = float(entry_salario.get().replace(',', '.').replace('R$', '').replace(' ', ''))
+    horas = int(entry_horas.get())
+    
+    valor_hora_trab = salario / horas
+    valor_hora_trab_f = float('{:.2f}'.format(valor_hora_trab))
+    
+    valor_hora_60 = (valor_hora_trab_f * 0.6) + valor_hora_trab_f
+    valor_hora_60_f = f'R$ {valor_hora_60:.2f}'
+    
+    label_valor_60 = tk.Label(label_titulo3, text='Valor hora extra 60%(seg à sex):')
+    label_valor_60.grid(row=10, column=0, columnspan=3, padx=5, pady=5, sticky='w')
+    
+    entry_valor_60 = tk.Entry(label_titulo3, width=8, state='disabled')
+    entry_valor_60.grid(row=10, column=1, padx=25, pady=5, sticky='e')
+    entry_valor_60.config(state='normal')
+    entry_valor_60.insert(0, valor_hora_60_f.replace('.', ','))
+    entry_valor_60.config(state='disabled')
+        
+    label_valor_80 = tk.Label(label_titulo3, text='Valor hora extra 80%(sab):')
+    label_valor_80.grid(row=11, column=0, padx=5, pady=5, sticky='w')
+    
+    valor_hora_80 = (valor_hora_trab_f * 0.8) + valor_hora_trab_f
+    valor_hora_80_f = f'R$ {valor_hora_80:.2f}'
+    
+    entry_valor_80 = tk.Entry(label_titulo3, width=8, state='disabled')
+    entry_valor_80.grid(row=11, column=1, padx=0, pady=5, sticky='w')
+    entry_valor_80.config(state='normal')
+    entry_valor_80.insert(0, valor_hora_80_f.replace('.', ','))
+    entry_valor_80.config(state='disabled')
+    
+    label_valor_100 = tk.Label(label_titulo3, text='Valor hora extra 100%(dom):')
+    label_valor_100.grid(row=12, column=0, columnspan=2, padx=5, pady=5, sticky='w')
+    
+    valor_hora_100 = (valor_hora_trab_f * 1) + valor_hora_trab_f
+    valor_hora_100_f = f'R$ {valor_hora_100:.2f}'
+    
+    entry_valor_100 = tk.Entry(label_titulo3, width=8, state='disabled')
+    entry_valor_100.grid(row=12, column=1, padx=10, pady=5, sticky='w')
+    entry_valor_100.config(state='normal')
+    entry_valor_100.insert(0, valor_hora_100_f.replace('.', ','))
+    entry_valor_100.config(state='disabled')
+    
+    label_valor_bip = tk.Label(label_titulo3, text='Valor hora BIP:')
+    label_valor_bip.grid(row=13, column=0, padx=5, pady=5, sticky='w')
+    
+    valor_hora_bip = valor_hora_trab_f / 2.859
+    valor_hora_bip_f = f'R$ {valor_hora_bip:.2f}'
+    
+    entry_valor_bip = tk.Entry(label_titulo3, width=8, state='disabled')
+    entry_valor_bip.grid(row=13, column=0, padx=10, pady=5, sticky='e')
+    entry_valor_bip.config(state='normal')
+    entry_valor_bip.insert(0, valor_hora_bip_f.replace('.', ','))
+    entry_valor_bip.config(state='disabled')
   
     #Criar o botão para editar os campos
-    botao_editar = tk.Button(label_titulo3, text='Editar', command=toggle_edit_mode)
-    botao_editar.grid(row=12, column=0, columnspan=2, padx=10, pady=10)    
+    botao_selecionar = tk.Button(label_titulo3, text='Selecionar', command=popup_selecionar_salarios)
+    botao_selecionar.grid(row=14, column=0, padx=5, pady=10, sticky='w')
     
-    #Desabilitar os campos
-    entry_valor_60.config(state='disabled')
-    entry_valor_80.config(state='disabled')
-    entry_valor_100.config(state='disabled')
-    entry_valor_bip.config(state='disabled')
+    botao_cadastro = tk.Button(label_titulo3, text='Cadastrar', command=pop_cadastro)
+    botao_cadastro.grid(row=14, column=0, padx=0, pady=10, sticky='e')
         
     #Verificar qual botão foi clicado para abrir a nova tela
     def verificar_click_btn_menu(botao):        
@@ -725,8 +910,9 @@ def abrir_config_horas():
     config_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
        
 #Função para abrir a tela de resultados        
-def abrir_resultado():
+def abrir_resultado():    
     global vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5, vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10, vlr_mes11, vlr_mes12, cal_filtro
+    global label_mes1, label_mes2, label_mes3, label_mes4, label_mes5, label_mes6, label_mes7, label_mes8, label_mes9, label_mes10, label_mes10, label_mes11, label_mes12
     
     #Ocultar janela atual
     app.withdraw()       
@@ -739,10 +925,10 @@ def abrir_resultado():
     
     #Criação do Label para adicionar horas extras
     label_titulo4 = tk.Label(resultados_window, text='Valores Recebidos Por Mês', font=('Arial', 25, 'bold'))
-    label_titulo4.grid(row=0, column=0, columnspan=10, padx=0, pady=10)
+    label_titulo4.grid(row=0, column=0, columnspan=12, padx=0, pady=10)
     
     #Label primeiro mês
-    label_mes1 = LabelFrame(resultados_window, text='1º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes1 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes1.grid(row=1, column=0, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes1 = tk.Label(label_mes1, text='Total recebido:')
@@ -752,7 +938,7 @@ def abrir_resultado():
     vlr_mes1.grid(row=2, column=1, padx=2, pady=10, sticky='w')
     
     #Label segundo mês
-    label_mes2 = LabelFrame(resultados_window, text='2º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes2 = LabelFrame(resultados_window,  font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes2.grid(row=1, column=2, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes2 = tk.Label(label_mes2, text='Total recebido:')
@@ -762,7 +948,7 @@ def abrir_resultado():
     vlr_mes2.grid(row=2, column=3, padx=2, pady=10, sticky='w')
     
     #Label terceiro mês
-    label_mes3 = LabelFrame(resultados_window, text='3º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes3 = LabelFrame(resultados_window,  font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes3.grid(row=1, column=4, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes3 = tk.Label(label_mes3, text='Total recebido:')
@@ -772,7 +958,7 @@ def abrir_resultado():
     vlr_mes3.grid(row=2, column=5, padx=2, pady=10, sticky='w')
     
     #Label quarto mês
-    label_mes4 = LabelFrame(resultados_window, text='4º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes4 = LabelFrame(resultados_window,  font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes4.grid(row=1, column=6, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes4 = tk.Label(label_mes4, text='Total recebido:')
@@ -782,7 +968,7 @@ def abrir_resultado():
     vlr_mes4.grid(row=2, column=7, padx=2, pady=10, sticky='w')
     
     #Label quinto mês
-    label_mes5 = LabelFrame(resultados_window, text='5º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes5 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes5.grid(row=1, column=8, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes5 = tk.Label(label_mes5, text='Total recebido:')
@@ -792,7 +978,7 @@ def abrir_resultado():
     vlr_mes5.grid(row=2, column=9, padx=2, pady=10, sticky='w')
     
     #Label sexto mês
-    label_mes6 = LabelFrame(resultados_window, text='6º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes6 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes6.grid(row=1, column=10, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes6 = tk.Label(label_mes6, text='Total recebido:')
@@ -802,7 +988,7 @@ def abrir_resultado():
     vlr_mes6.grid(row=2, column=11, padx=2, pady=10, sticky='w')
     
     #Label setimo mês
-    label_mes7 = LabelFrame(resultados_window, text='7º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes7 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes7.grid(row=4, column=0, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes7 = tk.Label(label_mes7, text='Total recebido:')
@@ -812,7 +998,7 @@ def abrir_resultado():
     vlr_mes7.grid(row=5, column=1, padx=2, pady=10, sticky='w')
     
     #Label oitavo mês
-    label_mes8 = LabelFrame(resultados_window, text='8º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes8 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes8.grid(row=4, column=2, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes8 = tk.Label(label_mes8, text='Total recebido:')
@@ -822,7 +1008,7 @@ def abrir_resultado():
     vlr_mes8.grid(row=5, column=3, padx=2, pady=10, sticky='w')
     
     #Label nono mês
-    label_mes9 = LabelFrame(resultados_window, text='9º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes9 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes9.grid(row=4, column=4, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes9 = tk.Label(label_mes9, text='Total recebido:')
@@ -832,7 +1018,7 @@ def abrir_resultado():
     vlr_mes9.grid(row=5, column=5, padx=2, pady=10, sticky='w')
     
     #Label decimo mês
-    label_mes10 = LabelFrame(resultados_window, text='10º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes10 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes10.grid(row=4, column=6, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes10 = tk.Label(label_mes10, text='Total recebido:')
@@ -842,7 +1028,7 @@ def abrir_resultado():
     vlr_mes10.grid(row=5, column=7, padx=2, pady=10, sticky='w')
     
     #Label decimo primero mês
-    label_mes11 = LabelFrame(resultados_window, text='11º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes11 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes11.grid(row=4, column=8, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes11 = tk.Label(label_mes11, text='Total recebido:')
@@ -852,7 +1038,7 @@ def abrir_resultado():
     vlr_mes11.grid(row=5, column=9, padx=2, pady=10, sticky='w')
     
     #Label decimo segundo mês
-    label_mes12 = LabelFrame(resultados_window, text='12º Mês', font=('Arial', 12, 'bold'), labelanchor='n')
+    label_mes12 = LabelFrame(resultados_window, font=('Arial', 12, 'bold'), labelanchor='n')
     label_mes12.grid(row=4, column=10, columnspan=2, padx=15, pady=10, sticky='w')
     
     label_vlr_mes12 = tk.Label(label_mes12, text='Total recebido:')
@@ -895,6 +1081,28 @@ def abrir_resultado():
     #Configurar o evento para fechar a janela
     resultados_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
     
+#Verificar se ha salarios registrados no banco para poder fazer os calculos do programa
+def verificar_salario_db():
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    
+    c.execute("SELECT COUNT(*) FROM salario")
+    resultado = c.fetchone()
+    
+    conn.close()
+        
+    if resultado and resultado[0] > 0:
+        None
+    else:
+        resposta = messagebox.askquestion('Nenhum Salario Cadastrado',
+                                          'Não há nenhum salario cadastrado para que sejam feitas os calculos de horas, por gentileza cadastrar.\n'
+                                          'Gostaria de cadastrar um novo salario?',
+                                          icon='warning')
+        if resposta == 'yes':
+            abrir_config_horas()
+        else:
+            encerrar_programa()
+
 #Função para fechar o programa
 def encerrar_programa():
     app.quit()
@@ -903,4 +1111,5 @@ abrir_inicio()
 criar_tabela()
 atualizar_qtd_horas_extras()
 mostrar_calendario(feriados)
+verificar_salario_db()
 app.mainloop()
