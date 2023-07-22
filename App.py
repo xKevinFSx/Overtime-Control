@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import *
 from tkinter import messagebox
-from tkinter import ttk
 from datetime import date, datetime, timedelta
 import calendar
 import locale
@@ -11,6 +10,7 @@ import requests
 import confs
 import matplotlib.pyplot as plt
 import pickle
+import time
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -38,7 +38,6 @@ entry_valor_60 = None
 entry_valor_80 = None
 entry_valor_100 = None
 entry_valor_bip = None
-edit_mode = False  # Variável de controle para o modo de edição
 
 valor_60 = 48.52
 valor_80 = 54.59
@@ -311,32 +310,39 @@ def atualizar_qtd_horas_extras():
     qtd_horas_extras_domfer.config(text=f"{total_horas_domingo} hora(s)")
     qtd_horas_bips.config(text=f'{total_horas_bip} hora(s)')
     
-    if valor_60 is not None:
-        resultado_segsex = total_horas_semana * valor_60
+    carregar_valores_horas()
+    
+    vlr_hora_60 = str(hora_60).replace(',', '.').replace('R$', '').replace(' ', '')
+    vlr_hora_80 = str(hora_80).replace(',', '.').replace('R$', '').replace(' ', '')
+    vlr_hora_100 = str(hora_100).replace(',', '.').replace('R$', '').replace(' ', '')
+    vlr_hora_bip = str(hora_bip).replace(',', '.').replace('R$', '').replace(' ', '')
+    
+    if vlr_hora_60 is not None:
+        resultado_segsex = total_horas_semana * float(vlr_hora_60)
         resultado_segsex_decimal = '{:.2f}'.format(resultado_segsex) #Deixar somente com 2 casas decimais e arredontar 
         resultado_segsex_str = str(resultado_segsex_decimal).replace('.', ',')
         vlr_horas_extras_segsex.config(text=f"R$ {resultado_segsex_str}")
     else:
         None
     
-    if valor_80 is not None:
-        resultado_sab = total_horas_sabado * valor_80
+    if vlr_hora_80 is not None:
+        resultado_sab = total_horas_sabado * float(vlr_hora_80)
         resultado_sab_decimal = '{:.2f}'.format(resultado_sab) #Deixar somente com 2 casas decimais e arredontar 
         resultado_sab_str = str(resultado_sab_decimal).replace('.', ',')
         vlr_horas_extras_sab.config(text=f"R$ {resultado_sab_str}")
     else:
         None
         
-    if valor_100 is not None:
-        resultado_dom = total_horas_domingo * valor_100
+    if vlr_hora_100 is not None:
+        resultado_dom = total_horas_domingo * float(vlr_hora_100)
         resultado_dom_format = '{:.2f}'.format(resultado_dom) #Deixar somente com 2 casas decimais e arredontar
         resultado_dom_str = str(resultado_dom_format).replace('.', ',')
         vlr_horas_extras_domfer.config(text=f"R$ {resultado_dom_str}")
     else:
         None
         
-    if valor_bip is not None:
-        resultado_bip = total_horas_bip * valor_bip
+    if vlr_hora_bip is not None:
+        resultado_bip = total_horas_bip * float(vlr_hora_bip)
         resultado_bip_decimal = '{:.2f}'.format(resultado_bip) #Deixar somente com 2 casas decimais e arredontar 
         resultado_bip_str = str(resultado_bip_decimal).replace('.', ',')
         vlr_horas_bips.config(text=f"R$ {resultado_bip_str}")
@@ -577,7 +583,7 @@ def salvar_valores():
     #Serializar e salvar os valores em um arquivo
     with open("valores_salarios.pickle", "wb") as file:
         pickle.dump({"salario": salario, "horas_trabalhadas": horas_trabalhadas}, file)
-    
+        
 #Função para carregar os valores salvar no arquivo
 def carregar_valores():
     try:
@@ -587,7 +593,7 @@ def carregar_valores():
             salario = valores["salario"]
             horas_trabalhadas = valores["horas_trabalhadas"]
 
-            # Exibir os valores nos campos de entrada
+            #Exibir os valores nos campos de entrada
             entry_salario.config(state='normal')
             entry_salario.delete(0, tk.END)
             entry_salario.insert(0, salario)
@@ -602,6 +608,70 @@ def carregar_valores():
         #Se o arquivo não existir (primeira execução), não faz nada
         pass
 
+#Função para salvar os valores das horas
+def salvar_valores_horas():
+    vlr_hora_60 = entry_valor_60.get()
+    vlr_hora_80 = entry_valor_80.get()
+    vlr_hora_100 = entry_valor_100.get()
+    vlr_hora_bip = entry_valor_bip.get() 
+
+    #Serializar e salvar os valores em um arquivo
+    with open('valores_horas.pickle', 'wb') as file:
+        pickle.dump({'vlr_hora_60': vlr_hora_60, 'vlr_hora_80': vlr_hora_80, 'vlr_hora_100': vlr_hora_100, 'vlr_hora_bip': vlr_hora_bip}, file)
+    
+#Função para carregar os valores das horas
+def carregar_valores_horas():
+    global hora_60, hora_80, hora_100, hora_bip
+    
+    try:
+        #Carregar os valores do arquivo, se existir
+        with open("valores_horas.pickle", "rb") as file:
+            valores = pickle.load(file)
+            hora_60 = valores["vlr_hora_60"]
+            hora_80 = valores["vlr_hora_80"]
+            hora_100 = valores["vlr_hora_100"]
+            hora_bip = valores["vlr_hora_bip"]
+
+    except FileNotFoundError:
+        #Se o arquivo não existir (primeira execução), não faz nada
+        pass    
+
+#Função para calcular valores das horas extras de acordo com o salario
+def calcular_valores_horas():
+    #global valor_hora_trab_f, valor_hora_60_f, valor_hora_80_f, valor_hora_100_f, valor_hora_bip_f
+    
+    sal = entry_salario.get()
+    if sal.strip() != '':
+        salario = float(entry_salario.get().replace(',', '.').replace('R$', '').replace(' ', ''))
+        horas = int(entry_horas.get())
+        
+        valor_hora_trab = salario / horas
+        valor_hora_trab_f = float('{:.2f}'.format(valor_hora_trab))
+            
+        valor_hora_60 = (valor_hora_trab_f * 0.6) + valor_hora_trab_f
+        valor_hora_60_f = f'R$ {valor_hora_60:.2f}'
+        entry_valor_60.config(state='normal')
+        entry_valor_60.insert(0, valor_hora_60_f.replace('.', ','))
+        entry_valor_60.config(state='disabled')
+                    
+        valor_hora_80 = (valor_hora_trab_f * 0.8) + valor_hora_trab_f
+        valor_hora_80_f = f'R$ {valor_hora_80:.2f}'
+        entry_valor_80.config(state='normal')
+        entry_valor_80.insert(0, valor_hora_80_f.replace('.', ','))
+        entry_valor_80.config(state='disabled')
+        
+        valor_hora_100 = (valor_hora_trab_f * 1) + valor_hora_trab_f
+        valor_hora_100_f = f'R$ {valor_hora_100:.2f}'
+        entry_valor_100.config(state='normal')
+        entry_valor_100.insert(0, valor_hora_100_f.replace('.', ','))
+        entry_valor_100.config(state='disabled')            
+            
+        valor_hora_bip = valor_hora_trab_f / 2.859
+        valor_hora_bip_f = f'R$ {valor_hora_bip:.2f}'
+        entry_valor_bip.config(state='normal')
+        entry_valor_bip.insert(0, valor_hora_bip_f.replace('.', ','))
+        entry_valor_bip.config(state='disabled')
+        
 #Função para abrir a tela de configurar horas
 def abrir_config_horas():
     global cal_dia_hora_extra, entry_quantidade_horas, entry_valor_60, entry_valor_80, entry_valor_100, entry_valor_bip, mensagem_label, cal_quinzena, entry_horas_bip, valor_60, valor_80, valor_100, valor_bip, mensagem_label2, config_window, cal_inicio, cal_fim, mensagem_label3
@@ -797,12 +867,16 @@ def abrir_config_horas():
             
             #Fechar a janela de diálogo
             popup_salarios.destroy()
+            
+            salvar_valores()
+            carregar_valores()
+            
+            calcular_valores_horas()
+            #app.after(1000, calcular_valores_horas)
 
         #Botão para selecionar o salário e chamar a função selecionar_salario
         botao_selecionar_salario = tk.Button(popup_salarios, text='Selecionar', command=selecionar_salario)
         botao_selecionar_salario.grid(row=1, column=0, padx=10, pady=10)
-        
-        salvar_valores()
     
     #Frame de configurar valores
     label_titulo3 = LabelFrame(config_window, text='Configurar Valores', font=('Arial', 16, 'bold'), labelanchor='n')
@@ -823,66 +897,44 @@ def abrir_config_horas():
     #Carregar, se houver, valores no arquivo
     carregar_valores()
     
-    salario = float(entry_salario.get().replace(',', '.').replace('R$', '').replace(' ', ''))
-    horas = int(entry_horas.get())
-    
-    valor_hora_trab = salario / horas
-    valor_hora_trab_f = float('{:.2f}'.format(valor_hora_trab))
-    
-    valor_hora_60 = (valor_hora_trab_f * 0.6) + valor_hora_trab_f
-    valor_hora_60_f = f'R$ {valor_hora_60:.2f}'
-    
     label_valor_60 = tk.Label(label_titulo3, text='Valor hora extra 60%(seg à sex):')
     label_valor_60.grid(row=10, column=0, columnspan=3, padx=5, pady=5, sticky='w')
     
     entry_valor_60 = tk.Entry(label_titulo3, width=8, state='disabled')
     entry_valor_60.grid(row=10, column=1, padx=25, pady=5, sticky='e')
-    entry_valor_60.config(state='normal')
-    entry_valor_60.insert(0, valor_hora_60_f.replace('.', ','))
-    entry_valor_60.config(state='disabled')
         
     label_valor_80 = tk.Label(label_titulo3, text='Valor hora extra 80%(sab):')
     label_valor_80.grid(row=11, column=0, padx=5, pady=5, sticky='w')
     
-    valor_hora_80 = (valor_hora_trab_f * 0.8) + valor_hora_trab_f
-    valor_hora_80_f = f'R$ {valor_hora_80:.2f}'
-    
     entry_valor_80 = tk.Entry(label_titulo3, width=8, state='disabled')
     entry_valor_80.grid(row=11, column=1, padx=0, pady=5, sticky='w')
-    entry_valor_80.config(state='normal')
-    entry_valor_80.insert(0, valor_hora_80_f.replace('.', ','))
-    entry_valor_80.config(state='disabled')
-    
+
     label_valor_100 = tk.Label(label_titulo3, text='Valor hora extra 100%(dom):')
     label_valor_100.grid(row=12, column=0, columnspan=2, padx=5, pady=5, sticky='w')
     
-    valor_hora_100 = (valor_hora_trab_f * 1) + valor_hora_trab_f
-    valor_hora_100_f = f'R$ {valor_hora_100:.2f}'
-    
     entry_valor_100 = tk.Entry(label_titulo3, width=8, state='disabled')
     entry_valor_100.grid(row=12, column=1, padx=10, pady=5, sticky='w')
-    entry_valor_100.config(state='normal')
-    entry_valor_100.insert(0, valor_hora_100_f.replace('.', ','))
-    entry_valor_100.config(state='disabled')
-    
+   
     label_valor_bip = tk.Label(label_titulo3, text='Valor hora BIP:')
     label_valor_bip.grid(row=13, column=0, padx=5, pady=5, sticky='w')
     
-    valor_hora_bip = valor_hora_trab_f / 2.859
-    valor_hora_bip_f = f'R$ {valor_hora_bip:.2f}'
-    
     entry_valor_bip = tk.Entry(label_titulo3, width=8, state='disabled')
     entry_valor_bip.grid(row=13, column=0, padx=10, pady=5, sticky='e')
-    entry_valor_bip.config(state='normal')
-    entry_valor_bip.insert(0, valor_hora_bip_f.replace('.', ','))
-    entry_valor_bip.config(state='disabled')
-  
-    #Criar o botão para editar os campos
+    vlr_60 = entry_valor_bip.get()
+    
+    calcular_valores_horas()
+    
+    #Botão para selecionar e cadastrar salario
     botao_selecionar = tk.Button(label_titulo3, text='Selecionar', command=popup_selecionar_salarios)
     botao_selecionar.grid(row=14, column=0, padx=5, pady=10, sticky='w')
     
     botao_cadastro = tk.Button(label_titulo3, text='Cadastrar', command=pop_cadastro)
     botao_cadastro.grid(row=14, column=0, padx=0, pady=10, sticky='e')
+    
+    vlr_sal = entry_salario.get()
+    if not vlr_sal.strip() == '':
+        if vlr_60.strip() == '':
+            salvar_valores_horas()
         
     #Verificar qual botão foi clicado para abrir a nova tela
     def verificar_click_btn_menu(botao):        
