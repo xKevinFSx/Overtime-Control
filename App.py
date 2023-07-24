@@ -39,10 +39,6 @@ entry_valor_80 = None
 entry_valor_100 = None
 entry_valor_bip = None
 
-valor_60 = 48.52
-valor_80 = 54.59
-valor_100 = 60.66
-valor_bip = 10.61
 
 total_horas_semana = 0
 total_horas_sabado = 0
@@ -527,53 +523,7 @@ def inserir_total_mes():
     
     conn.commit()
     conn.close()
-    
-#Função para filtrar os valores a apartir da data selecionada
-def filtrar_valores():
-    data = cal_filtro.get()
         
-    if data is None or data == '':
-        data_atual = datetime.today()
-        data_filtro = data_atual - timedelta(days=365)
-    else:
-        data_filtro = converter_data(data)
-    
-    conn = sqlite3.connect('horas.db')
-    c = conn.cursor()
-    
-    consulta = ("SELECT total_mes, mes_data FROM ganho_mes WHERE mes_data >= ? ORDER BY mes_data ASC LIMIT 12")
-    c.execute(consulta, (data_filtro,))
-    
-    resultados = c.fetchall()
-    
-    labels_vlr_mes = [vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5,
-                      vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10,
-                      vlr_mes11, vlr_mes12]
-    
-    labels_nome_mes = [label_mes1, label_mes2, label_mes3, label_mes4, 
-                       label_mes5, label_mes6, label_mes7, label_mes8, 
-                       label_mes9, label_mes10, label_mes10, label_mes11, 
-                       label_mes12]
-    
-    #Atualiza o valor do Label com o valor obtido do banco de dados
-    for i, resultado in enumerate(resultados):
-        if i < len(labels_vlr_mes):
-            labels_vlr_mes_str = str(resultado[0]).replace('.', ',')
-            labels_vlr_mes[i].config(text=f'R$ {labels_vlr_mes_str}')
-            
-            #Extrair mês e ano das datas e preencher no frame
-            mes_data = datetime.strptime(resultado[1], '%Y-%m-%d') #convertar string para date
-            nome_mes = mes_data.strftime('%B').capitalize()
-            ano = mes_data.year
-            labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')        
-    
-    #Caso tenham menos de 12 registros, limpa os demais Labels
-    for i in range(len(resultados), 12):
-        labels_vlr_mes[i].config(text='')
-        labels_nome_mes[i].config(text='')
-    
-    conn.close()
-    
 #Função para salvar os valores do salario e sempre que entrar na tela estar com ele
 def salvar_valores():
     #Obter os valores dos campos de entrada
@@ -960,6 +910,52 @@ def abrir_config_horas():
     
     #Configurar o evento para fechar a janela
     config_window.protocol("WM_DELETE_WINDOW", encerrar_programa)
+      
+#Função para filtrar os valores a apartir da data selecionada
+def filtrar_valores():
+    data = cal_filtro.get()
+        
+    if data is None or data == '':
+        data_atual = datetime.today()
+        data_filtro = data_atual - timedelta(days=365)
+    else:
+        data_filtro = converter_data(data)
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
+    
+    consulta = ("SELECT total_mes + dsr_mes AS total_ganho_mes, mes_data FROM ganho_mes WHERE mes_data >= ? ORDER BY mes_data ASC LIMIT 12")
+    c.execute(consulta, (data_filtro,))
+    
+    resultados = c.fetchall()
+    
+    labels_vlr_mes = [vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5,
+                      vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10,
+                      vlr_mes11, vlr_mes12]
+    
+    labels_nome_mes = [label_mes1, label_mes2, label_mes3, label_mes4, 
+                       label_mes5, label_mes6, label_mes7, label_mes8, 
+                       label_mes9, label_mes10, label_mes11, label_mes12]
+    
+    #Atualiza o valor do Label com o valor obtido do banco de dados
+    for i, resultado in enumerate(resultados):
+        if i < len(labels_vlr_mes):
+            valor_formatado = '{:.2f}'.format(resultado[0])
+            labels_vlr_mes_str = str(valor_formatado).replace('.', ',')
+            labels_vlr_mes[i].config(text=f'R$ {labels_vlr_mes_str}')
+            
+            #Extrair mês e ano das datas e preencher no frame
+            mes_data = datetime.strptime(resultado[1], '%Y-%m-%d') #convertar string para date
+            nome_mes = mes_data.strftime('%B').capitalize()
+            ano = mes_data.year
+            labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')        
+    
+    #Caso tenham menos de 12 registros, limpa os demais Labels
+    for i in range(len(resultados), 12):
+        labels_vlr_mes[i].config(text='')
+        labels_nome_mes[i].config(text='')
+    
+    conn.close()      
        
 #Função para abrir a tela de resultados        
 def abrir_resultado():    
