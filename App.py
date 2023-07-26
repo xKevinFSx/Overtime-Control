@@ -39,12 +39,12 @@ entry_valor_80 = None
 entry_valor_100 = None
 entry_valor_bip = None
 
-
 total_horas_semana = 0
 total_horas_sabado = 0
 total_horas_domingo = 0
 total_horas_bip = 0
 valor_total = 0
+dsr_total = 0
 
 response = requests.get(url)
 
@@ -61,7 +61,7 @@ else:
 
 #Função para abrir tela de inicio
 def abrir_inicio():
-    global menu_principal, menubar, app, qtd_horas_extras_segsex, qtd_horas_extras_sab, qtd_horas_extras_domfer, qtd_horas_bips, vlr_horas_extras_segsex, vlr_horas_extras_sab, vlr_horas_extras_domfer, vlr_horas_bips, vlr_total, calendar_frame, header_label
+    global menu_principal, menubar, app, qtd_horas_extras_segsex, qtd_horas_extras_sab, qtd_horas_extras_domfer, qtd_horas_bips, vlr_horas_extras_segsex, vlr_horas_extras_sab, vlr_horas_extras_domfer, vlr_horas_bips, vlr_total, calendar_frame, header_label, vlr_dsr
     
     #Tela
     app = tk.Tk()
@@ -128,11 +128,17 @@ def abrir_inicio():
     vlr_horas_bips = tk.Label(app, font=('Arial', 15))
     vlr_horas_bips.grid(row=8, column=3, columnspan=2, padx=230, sticky='nw')
 
-    label51 = tk.Label(app, text='Total a receber:', font=('Arial', 15, 'bold'))
+    label51 = tk.Label(app, text='Total DSR:', font=('Arial', 15, 'bold'))
     label51.grid(row=9, column=3, padx=70, sticky='w')
+    
+    vlr_dsr = tk.Label(app, font=('Arial', 15))
+    vlr_dsr.grid(row=9, column=3, columnspan=2, padx=180, sticky='w')
+    
+    label61 = tk.Label(app, text='Total a receber:', font=('Arial', 15, 'bold'))
+    label61.grid(row=10, column=3, padx=70, sticky='w')
 
     vlr_total = tk.Label(app, font=('Arial', 15))
-    vlr_total.grid(row=9, column=3, columnspan=2, padx=230, sticky='w')
+    vlr_total.grid(row=10, column=3, columnspan=2, padx=230, sticky='w')
 
     #Legendas para o calendario
     bck_lgd_cal = tk.Label(app, bg='purple')
@@ -240,9 +246,33 @@ def mostrar_calendario(feriados):
                             label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
             label.grid(row=week_num+1, column=day_num, sticky='e')           
 
+#Função para contar dias uteis, feriados e domingos do mes atual
+def contar_dias_uteis(ano, mes, feriados):
+    total_dias_uteis = 0
+    total_feriados = 0
+    total_domingos = 0
+    num_dias_mes_atual = calendar.monthrange(ano, mes)[1]
+    
+    for day in range(1, num_dias_mes_atual + 1):
+        data_obj = datetime(ano, mes, day).date()
+        dia_semana = data_obj.weekday()
+
+        #Verifica se o dia não é feriado
+        if data_obj in feriados:
+            total_feriados += 1
+        
+        #Verifica se o dia é um domingo (dia_semana = 6)
+        elif dia_semana == 6:
+            total_domingos += 1
+                        
+        else:
+            total_dias_uteis += 1
+            
+    return total_dias_uteis, total_feriados, total_domingos    
+
 #Função para atualizar as quantidades de horas e os valores
 def atualizar_qtd_horas_extras():
-    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior, resultado5, valor_total
+    global total_horas_semana, total_horas_sabado, total_horas_domingo, total_horas_bip, hoje, mes, ano, mes_anterior, resultado5, valor_total, dsr_total
     global qtd_horas_extras_segsex, qtd_horas_extras_sab, qtd_horas_extras_domfer, qtd_horas_bips, vlr_horas_extras_segsex, vlr_horas_extras_sab, vlr_horas_extras_domfer, vlr_horas_bips, vlr_total
     
     #limpar as variaveis de horas
@@ -251,6 +281,7 @@ def atualizar_qtd_horas_extras():
     total_horas_domingo = 0
     total_horas_bip = 0
     valor_total = 0
+    dsr_total = 0
     
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
@@ -344,9 +375,38 @@ def atualizar_qtd_horas_extras():
         vlr_horas_bips.config(text=f"R$ {resultado_bip_str}")
     else:
         None
+    
+    dias_uteis_mes, feriados_mes, domingos_mes = contar_dias_uteis(ano, mes, feriados)
+    feriados_domingos = feriados_mes + domingos_mes 
+        
+    #Calcular DSR sobre as horas BIP
+    dsr_bip = (resultado_bip / dias_uteis_mes) * feriados_domingos
+    dsr_bip_decimal = '{:.2f}'.format(dsr_bip) #Deixar somente com 2 casas decimais e arredontar
+    dsr_bip_str = str(dsr_bip_decimal).replace('.', ',')
+    
+    #Calcular DSR sobre horas extras 60%
+    dsr_hr_60 = ((total_horas_semana / dias_uteis_mes) * feriados_domingos) * float(vlr_hora_60)
+    dsr_hr_60_decimal = '{:.2f}'.format(dsr_hr_60) #Deixar somente com 2 casas decimais e arredontar
+    dsr_hr_60_str = str(dsr_hr_60_decimal).replace('.', ',')
+
+    #Calcular DSR sobre horas extras 80%
+    dsr_hr_80 = ((total_horas_sabado / dias_uteis_mes) * feriados_domingos) * float(vlr_hora_80)
+    dsr_hr_80_decimal = '{:.2f}'.format(dsr_hr_80) #Deixar somente com 2 casas decimais e arredontar
+    dsr_hr_80_str = str(dsr_hr_80_decimal).replace('.', ',')
+    
+    #Calcular DSR sobre horas extras 100%
+    dsr_hr_100 = ((total_horas_domingo / dias_uteis_mes) * feriados_domingos) * float(vlr_hora_100)
+    dsr_hr_100_decimal = '{:.2f}'.format(dsr_hr_100) #Deixar somente com 2 casas decimais e arredontar
+    dsr_hr_100_str = str(dsr_hr_100_decimal).replace('.', ',')
+     
+    #Mostrar valor de DSR sobre os valores na tela
+    dsr_total = dsr_bip + dsr_hr_60 + dsr_hr_80 + dsr_hr_100
+    dsr_total_decimal = '{:.2f}'.format(dsr_total) #Deixar somente com 2 casas decimais e arredontar
+    dsr_total_str = str(dsr_total_decimal).replace('.', ',')
+    vlr_dsr.config(text=f'R$ {dsr_total_str}')
         
     #Calcular total a receber de acordo com valores ja mostrados na tela
-    valor_total = resultado_bip + resultado_dom + resultado_sab + resultado_segsex
+    valor_total = (resultado_bip + resultado_dom + resultado_sab + resultado_segsex) + dsr_total
     valor_total_decimal = '{:.2f}'.format(valor_total) #Deixar somente com 2 casas decimais e arredontar
     valor_total_str = str(valor_total_decimal).replace('.', ',')
     vlr_total.config(text=f'R$ {valor_total_str}')
@@ -504,7 +564,8 @@ def inserir_total_mes():
     #Converter a data para padrão do sqlite
     data_mes = converter_data(data)
     
-    valor = valor_total
+    valor_salario = '{:.2f}'.format(valor_total)    
+    valor_dsr = '{:.2f}'.format(dsr_total)
     
     conn = sqlite3.connect('horas.db')
     c = conn.cursor()
@@ -514,12 +575,14 @@ def inserir_total_mes():
     c.execute(consulta, (data_mes,))
     registro = c.fetchone()
     
+    #Se não existir insere
     if registro is None:
-        insercao = ("INSERT INTO ganho_mes (mes_data, total_mes) VALUES (?, ?)")
-        c.execute(insercao, (data_mes, valor))
-    elif registro[2] != valor:
-        atualizar = ("UPDATE ganho_mes SET total_mes = ? WHERE mes_data = ?")
-        c.execute(atualizar, (valor, data_mes))
+        insercao = ("INSERT INTO ganho_mes (mes_data, total_mes, dsr_mes) VALUES (?, ?, ?)")
+        c.execute(insercao, (data_mes, valor_salario, valor_dsr))
+    #Se existir atualiza se for diferente
+    elif registro[2] != valor_salario:
+        atualizar = ("UPDATE ganho_mes SET total_mes = ? dsr_mes = ? WHERE mes_data = ?")
+        c.execute(atualizar, (valor_salario, valor_dsr, data_mes))
     
     conn.commit()
     conn.close()
@@ -940,15 +1003,16 @@ def filtrar_valores():
     #Atualiza o valor do Label com o valor obtido do banco de dados
     for i, resultado in enumerate(resultados):
         if i < len(labels_vlr_mes):
-            valor_formatado = '{:.2f}'.format(resultado[0])
-            labels_vlr_mes_str = str(valor_formatado).replace('.', ',')
-            labels_vlr_mes[i].config(text=f'R$ {labels_vlr_mes_str}')
-            
-            #Extrair mês e ano das datas e preencher no frame
-            mes_data = datetime.strptime(resultado[1], '%Y-%m-%d') #convertar string para date
-            nome_mes = mes_data.strftime('%B').capitalize()
-            ano = mes_data.year
-            labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')        
+            if resultado[0] is not None:
+                valor_formatado = '{:.2f}'.format(resultado[0])
+                labels_vlr_mes_str = str(valor_formatado).replace('.', ',')
+                labels_vlr_mes[i].config(text=f'R$ {labels_vlr_mes_str}')
+                
+                #Extrair mês e ano das datas e preencher no frame
+                mes_data = datetime.strptime(resultado[1], '%Y-%m-%d') #convertar string para date
+                nome_mes = mes_data.strftime('%B').capitalize()
+                ano = mes_data.year
+                labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')        
     
     #Caso tenham menos de 12 registros, limpa os demais Labels
     for i in range(len(resultados), 12):
