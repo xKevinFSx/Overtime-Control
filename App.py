@@ -188,25 +188,42 @@ def mostrar_calendario(feriados):
         label = tk.Label(calendar_frame, text=day, padx=10, pady=5, font=('Arial', 20, 'bold'))
         label.grid(row=0, column=i)
         
-    #Obter o primeiro dia do mês
+    #Obter o primeiro dia do mês atual
     primeiro_dia_mes = datetime(ano, mes, 1)
 
     #Obter o dia da semana do primeiro dia do mês (0 = domingo, 6 = sabado)
-    dia_semana_primeiro_dia = primeiro_dia_mes.weekday()
+    primeiro_dia_semana = primeiro_dia_mes.weekday()
 
-    #Calcular o número de dias no mês anterior
+    #Obter o ultimo dia do mês anterior
     ultimo_dia_mes_anterior = primeiro_dia_mes - timedelta(days=1)
-    num_dias_mes_anterior = ultimo_dia_mes_anterior.day
+    ultimo_dia_mes_anterior = ultimo_dia_mes_anterior.day
     mes_anterior = mes - 1
     
     #Calcular o número de dias no mês atual
     num_dias_mes_atual = calendar.monthrange(ano, mes)[1]
-
-    #Preencher os dias do calendário
-    dia_mes_anterior = num_dias_mes_anterior - dia_semana_primeiro_dia 
-    dia_proximo_mes = 1
     
-    #Resgatar os resultados da consulta no banco de dados
+    # Obter o último dia do mês atual
+    ultimo_dia_mes_atual = calendar.monthrange(ano, mes)[1]
+
+    # Obter o primeiro dia do próximo mês
+    primeiro_dia_proximo_mes = primeiro_dia_mes + timedelta(days=ultimo_dia_mes_atual)
+    
+    #Preencher a primeira semana do mês com os dias do mês anterior
+    primeira_semana_mes = cal[0] 
+    for day in range(len(primeira_semana_mes) -1, -1, -1):
+        if primeira_semana_mes[day] == 0:
+            cal[0][day] = ultimo_dia_mes_anterior
+            ultimo_dia_mes_anterior -= 1
+
+    #Preencher a ultima semana do mês com os dias do proximo mês
+    ult_semana_mes = cal[-1]
+    prox_mes_dia = 1
+    for day in range(len(ult_semana_mes)):
+        if ult_semana_mes[day] == 0:
+            cal[-1][day] = prox_mes_dia
+            prox_mes_dia += 1
+            
+    #Resgatar os resultados da consulta no banco de dados com as datas que estarei de plantão
     datas_plantao = []
     for data_inicio, data_fim in resultado5:
         dia_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
@@ -216,36 +233,26 @@ def mostrar_calendario(feriados):
     #Preencher os dias do calendário
     for week_num, week in enumerate(cal):
         for day_num, day in enumerate(week):
-            if week_num == 0 and day_num <= dia_semana_primeiro_dia:
-                #Dias do mês anterior
-                label = tk.Label(calendar_frame, text=str(dia_mes_anterior).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
-                dia_mes_anterior += 1
-            elif day == 0:
-                #Dias do próximo mês
-                label = tk.Label(calendar_frame, text=str(dia_proximo_mes).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
-                dia_proximo_mes += 1
-            elif day > num_dias_mes_atual:
-                #Dias adicionais do próximo mês
-                label = tk.Label(calendar_frame, text=str(dia_proximo_mes).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
-                dia_proximo_mes += 1
-            else:
-                #Dias do mês atual
-                data_obj = datetime(ano, mes, day).date()
-                data_api = datetime(ano, mes, day).date()
-                #Preencher dias de plantão
-                for dia_inicio, dia_fim in datas_plantao:
-                    if dia_inicio <= data_obj <= dia_fim:
-                        label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', bg='purple')
+            #Dias do mês atual
+            data_obj = datetime(ano, mes, day).date()
+            data_api = datetime(ano, mes, day).date()
+                
+            #Preencher dias de plantão
+            for dia_inicio, dia_fim in datas_plantao:
+                if dia_inicio <= data_obj <= dia_fim:
+                    label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', bg='purple')
+                    break
+                    
+                #Preencher, se houver, os feriados no mês
+                for feriado in feriados:
+                    if data_api == feriado['date']:
+                        label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', fg='red')
                         break
-                        label.grid(row=week_num+1, column=day_num, sticky='e')           
-                    for feriado in feriados:
-                        if data_api == feriado['date']:
-                            label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised', fg='red')
-                            break
-                        else:
-                            label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
+                    else:
+                        label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
             label.grid(row=week_num+1, column=day_num, sticky='e')           
 
+        
 #Função para contar dias uteis, feriados e domingos do mes atual
 def contar_dias_uteis(ano, mes, feriados):
     total_dias_uteis = 0
@@ -581,7 +588,7 @@ def inserir_total_mes():
         c.execute(insercao, (data_mes, valor_salario, valor_dsr))
     #Se existir atualiza se for diferente
     elif registro[2] != valor_salario:
-        atualizar = ("UPDATE ganho_mes SET total_mes = ? dsr_mes = ? WHERE mes_data = ?")
+        atualizar = ("UPDATE ganho_mes SET total_mes = ?, dsr_mes = ? WHERE mes_data = ?")
         c.execute(atualizar, (valor_salario, valor_dsr, data_mes))
     
     conn.commit()
