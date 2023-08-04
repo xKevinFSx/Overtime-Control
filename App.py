@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 from tkinter import *
 from tkinter import messagebox
 from datetime import date, datetime, timedelta
@@ -11,6 +12,9 @@ import confs
 import matplotlib.pyplot as plt
 import pickle
 import time
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import mplcursors
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -1007,6 +1011,9 @@ def filtrar_valores():
                        label_mes5, label_mes6, label_mes7, label_mes8, 
                        label_mes9, label_mes10, label_mes11, label_mes12]
     
+    data_x = []
+    valores_y = []
+    
     #Atualiza o valor do Label com o valor obtido do banco de dados
     for i, resultado in enumerate(resultados):
         if i < len(labels_vlr_mes):
@@ -1019,7 +1026,9 @@ def filtrar_valores():
                 mes_data = datetime.strptime(resultado[1], '%Y-%m-%d') #convertar string para date
                 nome_mes = mes_data.strftime('%B').capitalize()
                 ano = mes_data.year
-                labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')        
+                labels_nome_mes[i].config(text=f'{nome_mes} de {ano}')
+                data_x.append(mes_data.strftime('%b %Y'))  # Adiciona o mês e ano formatado à lista
+                valores_y.append(resultado[0])  # Adiciona o valor recebido à lista        
     
     #Caso tenham menos de 12 registros, limpa os demais Labels
     for i in range(len(resultados), 12):
@@ -1027,11 +1036,39 @@ def filtrar_valores():
         labels_nome_mes[i].config(text='')
     
     conn.close()      
+    
+    #Cria o gráfico de linhas somente se houver valores preenchidos
+    if valores_y:
+        fig = Figure(figsize=(10, 6))
+        ax = fig.add_subplot(111)
+        line, = ax.plot(data_x, valores_y, marker='o', color='b', linestyle='-', label='Valores')
+        ax.set_xlabel('Mês e Ano', fontweight='bold')
+        ax.set_ylabel('Quantidade de Valores Recebidos', fontweight='bold')
+        ax.set_title('Valores Recebidos por Mês(em R$)', fontweight='bold', fontsize=16)
+        ax.grid(True)
+        ax.legend()
+        
+        #Rotaciona as legendas do eixo X na diagonal
+        ax.set_xticklabels(data_x, rotation=45, ha='right')
+        
+        #Adiciona os valores das linhas diretamente no gráfico
+        for x, y in zip(data_x, valores_y):
+            ax.text(x, y, f'{y:.2f}', ha='left', va='top', fontweight='bold')
+            
+        #Move a legenda para o canto inferior esquerdo
+        ax.legend(loc='lower right')           
+        
+        #Cria um objeto FigureCanvasTkAgg para incorporar o gráfico no tkinter
+        canvas = FigureCanvasTkAgg(fig, master=resultados_window)
+        canvas.draw()
+        
+        canvas.get_tk_widget().grid(row=9, column=0, columnspan=12, padx=10, pady=10)
        
 #Função para abrir a tela de resultados        
 def abrir_resultado():    
     global vlr_mes1, vlr_mes2, vlr_mes3, vlr_mes4, vlr_mes5, vlr_mes6, vlr_mes7, vlr_mes8, vlr_mes9, vlr_mes10, vlr_mes11, vlr_mes12, cal_filtro
     global label_mes1, label_mes2, label_mes3, label_mes4, label_mes5, label_mes6, label_mes7, label_mes8, label_mes9, label_mes10, label_mes10, label_mes11, label_mes12
+    global resultados_window
     
     #Ocultar janela atual
     app.withdraw()       
@@ -1040,7 +1077,7 @@ def abrir_resultado():
     resultados_window = tk.Toplevel(app)
     resultados_window.title('Resultados dos meses')
     resultados_window.resizable(False, False)
-    resultados_window.geometry('1200x700')
+    resultados_window.geometry('1200x900')
     
     #Criação do Label para adicionar horas extras
     label_titulo4 = tk.Label(resultados_window, text='Valores Recebidos Por Mês', font=('Arial', 25, 'bold'))
@@ -1169,11 +1206,11 @@ def abrir_resultado():
     #Criação do calendario para selecionar data de filtro
     cal_filtro = DateEntry(resultados_window, date_pattern='dd/mm/yyyy', locale='pt_BR')
     cal_filtro.delete(0, tk.END)
-    cal_filtro.grid(row=7, column=0, padx=10, pady=10, sticky='w')
+    cal_filtro.grid(row=7, column=5, padx=10, pady=10, sticky='e')
     
     #Botão para filtrar de acordo com a data
     btn_filtrar = tk.Button(resultados_window, text='Filtrar', command=filtrar_valores)
-    btn_filtrar.grid(row=7, column=1, padx=0, pady=0, sticky='w')
+    btn_filtrar.grid(row=7, column=6, padx=0, pady=0, sticky='w')
     
     #Verificar qual botão foi clicado para abrir a nova tela
     def verificar_click_btn_menu(botao):        
