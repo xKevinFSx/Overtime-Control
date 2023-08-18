@@ -15,6 +15,8 @@ import time
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import mplcursors 
+import pysqlcipher3
+from pysqlcipher3 import dbapi2 as sqlite
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -425,9 +427,18 @@ def atualizar_qtd_horas_extras():
     #Chamar função de atualizar valor total no banco de dados
     inserir_total_mes()
 
+def criar_abrir_db():
+    conn = pysqlcipher3.connect('horas.db')
+    cria_db_key(conn, confs.db_key)
+    return conn
+
+def cria_db_key(conn, chave):
+    conn.execute(f"PRAGM key = '{chave}';")
+        
+
 #Função para criar a tabela no banco de dados
-def criar_tabela():
-    conn = sqlite3.connect('horas.db')
+def criar_tabela(conn):
+    #conn = sqlite3.connect('horas.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS horas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
