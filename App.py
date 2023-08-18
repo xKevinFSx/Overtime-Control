@@ -14,7 +14,7 @@ import pickle
 import time
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import mplcursors
+import mplcursors 
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
