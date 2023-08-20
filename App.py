@@ -11,12 +11,8 @@ import requests
 import confs
 import matplotlib.pyplot as plt
 import pickle
-import time
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import mplcursors 
-import pysqlcipher3
-from pysqlcipher3 import dbapi2 as sqlite
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -44,6 +40,10 @@ entry_valor_60 = None
 entry_valor_80 = None
 entry_valor_100 = None
 entry_valor_bip = None
+hora_60 = 0
+hora_80 = 0
+hora_100 = 0
+hora_bip = 0
 
 total_horas_semana = 0
 total_horas_sabado = 0
@@ -257,8 +257,7 @@ def mostrar_calendario(feriados):
                     else:
                         label = tk.Label(calendar_frame, text=str(day).zfill(2), padx=10, pady=5, font=('Arial', 35), relief='raised')
             label.grid(row=week_num+1, column=day_num, sticky='e')           
-
-        
+   
 #Função para contar dias uteis, feriados e domingos do mes atual
 def contar_dias_uteis(ano, mes, feriados):
     total_dias_uteis = 0
@@ -296,14 +295,14 @@ def atualizar_qtd_horas_extras():
     valor_total = 0
     dsr_total = 0
     
-    conn = sqlite3.connect('horas.db')
-    c = conn.cursor()
-    
     #Range de datas do dia 16 do ultimo mês até dia 15 do mês atual
     data_mes_anterior = str(ano) + '-' + mes_anterior_formatado + '-' + '16'
     data_mes_atual = str(ano) + '-' + mes_formatado + '-' + '15'
     
     dias_semana = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira']
+    
+    conn = sqlite3.connect('horas.db')
+    c = conn.cursor()
     
     #Contar qtd de horas extras na semana
     for dia_semana in dias_semana:
@@ -352,10 +351,11 @@ def atualizar_qtd_horas_extras():
     
     carregar_valores_horas()
     
-    vlr_hora_60 = str(hora_60).replace(',', '.').replace('R$', '').replace(' ', '')
-    vlr_hora_80 = str(hora_80).replace(',', '.').replace('R$', '').replace(' ', '')
-    vlr_hora_100 = str(hora_100).replace(',', '.').replace('R$', '').replace(' ', '')
-    vlr_hora_bip = str(hora_bip).replace(',', '.').replace('R$', '').replace(' ', '')
+    if hora_60 is not any:
+        vlr_hora_60 = str(hora_60).replace(',', '.').replace('R$', '').replace(' ', '')
+        vlr_hora_80 = str(hora_80).replace(',', '.').replace('R$', '').replace(' ', '')
+        vlr_hora_100 = str(hora_100).replace(',', '.').replace('R$', '').replace(' ', '')
+        vlr_hora_bip = str(hora_bip).replace(',', '.').replace('R$', '').replace(' ', '')
     
     if vlr_hora_60 is not None:
         resultado_segsex = total_horas_semana * float(vlr_hora_60)
@@ -425,20 +425,11 @@ def atualizar_qtd_horas_extras():
     vlr_total.config(text=f'R$ {valor_total_str}')
     
     #Chamar função de atualizar valor total no banco de dados
-    inserir_total_mes()
-
-def criar_abrir_db():
-    conn = pysqlcipher3.connect('horas.db')
-    cria_db_key(conn, confs.db_key)
-    return conn
-
-def cria_db_key(conn, chave):
-    conn.execute(f"PRAGM key = '{chave}';")
-        
+    inserir_total_mes()      
 
 #Função para criar a tabela no banco de dados
-def criar_tabela(conn):
-    #conn = sqlite3.connect('horas.db')
+def criar_tabela():
+    conn = sqlite3.connect('horas.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS horas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -462,7 +453,7 @@ def criar_tabela(conn):
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     vlr_salario FLOAT,
                     qtd_horas_trab INT)''')
-    conn.commit()
+    conn.commit() 
     conn.close()
     
 #Função para converter a data no formato "dd/mm/aaaa" para o formato adequado do SQLite("aaaa-mm-dd")
@@ -476,7 +467,7 @@ def inserir_horas_extra():
     dia = cal_dia_hora_extra.get()
     quantidade_horas = entry_quantidade_horas.get()
     
-    # Verificar se os campos estão preenchidos
+    #Verificar se os campos estão preenchidos
     if not dia:
         mensagem_label.config(text='Por favor, preencha um dia!')
         return
@@ -489,7 +480,7 @@ def inserir_horas_extra():
         mensagem_label.config(text='Por favor, preencha uma quantidade de horas valida!')
         return         
     
-    # Obter o dia da semana da data inserida 
+    #Obter o dia da semana da data inserida 
     dia_semana = datetime.strptime(dia, '%d/%m/%Y').strftime('%A')
     
     dia_sqlite = converter_data(dia)
@@ -614,19 +605,32 @@ def salvar_valores():
     #Obter os valores dos campos de entrada
     salario = entry_salario.get()
     horas_trabalhadas = entry_horas.get()
+    
+    #Serializar os valores
+    valores = {"salario": salario, "horas_trabalhadas": horas_trabalhadas}
+    dados_serializados = pickle.dumps(valores)
 
-    #Serializar e salvar os valores em um arquivo
-    with open("valores_salarios.pickle", "wb") as file:
-        pickle.dump({"salario": salario, "horas_trabalhadas": horas_trabalhadas}, file)
+    #Encriptar os dados
+    dados_criptografados = confs.cipher_suite.encrypt(dados_serializados)
+    
+    #Salvar os dados encriptados em um arquivo
+    with open("valores_salarios_cript.pickle", "wb") as file:
+        file.write(dados_criptografados)
         
 #Função para carregar os valores salvar no arquivo
 def carregar_valores():
     try:
         #Carregar os valores do arquivo, se existir
-        with open("valores_salarios.pickle", "rb") as file:
-            valores = pickle.load(file)
-            salario = valores["salario"]
-            horas_trabalhadas = valores["horas_trabalhadas"]
+        with open("valores_salarios_cript.pickle", "rb") as file:
+            dados_criptografados = file.read()
+           
+            #Desencriptar os dados 
+            dados_descriptografados = confs.cipher_suite.decrypt(dados_criptografados)
+            
+            #Desserializar os valores
+            valores = pickle.loads(dados_descriptografados)
+            salario = valores['salario']
+            horas_trabalhadas = valores['horas_trabalhadas']
 
             #Exibir os valores nos campos de entrada
             entry_salario.config(state='normal')
@@ -642,17 +646,24 @@ def carregar_valores():
     except FileNotFoundError:
         #Se o arquivo não existir (primeira execução), não faz nada
         pass
-
+    
 #Função para salvar os valores das horas
 def salvar_valores_horas():
     vlr_hora_60 = entry_valor_60.get()
     vlr_hora_80 = entry_valor_80.get()
     vlr_hora_100 = entry_valor_100.get()
     vlr_hora_bip = entry_valor_bip.get() 
+    
+    #Serializar os valores
+    valores = {'vlr_hora_60': vlr_hora_60, 'vlr_hora_80': vlr_hora_80, 'vlr_hora_100': vlr_hora_100, 'vlr_hora_bip': vlr_hora_bip}
+    dados_serializados = pickle.dumps(valores)
+
+    #Encriptar os dados
+    dados_criptografados = confs.cipher_suite.encrypt(dados_serializados)
 
     #Serializar e salvar os valores em um arquivo
-    with open('valores_horas.pickle', 'wb') as file:
-        pickle.dump({'vlr_hora_60': vlr_hora_60, 'vlr_hora_80': vlr_hora_80, 'vlr_hora_100': vlr_hora_100, 'vlr_hora_bip': vlr_hora_bip}, file)
+    with open('valores_horas_cript.pickle', 'wb') as file:
+        file.write(dados_criptografados)
     
 #Função para carregar os valores das horas
 def carregar_valores_horas():
@@ -660,8 +671,14 @@ def carregar_valores_horas():
     
     try:
         #Carregar os valores do arquivo, se existir
-        with open("valores_horas.pickle", "rb") as file:
-            valores = pickle.load(file)
+        with open("valores_horas_cript.pickle", "rb") as file:
+            dados_criptografados = file.read()
+            
+            #Desencriptar os dados 
+            dados_descriptografados = confs.cipher_suite.decrypt(dados_criptografados)
+            
+            #Desserializar os valores
+            valores = pickle.loads(dados_descriptografados)
             hora_60 = valores["vlr_hora_60"]
             hora_80 = valores["vlr_hora_80"]
             hora_100 = valores["vlr_hora_100"]
@@ -669,7 +686,7 @@ def carregar_valores_horas():
 
     except FileNotFoundError:
         #Se o arquivo não existir (primeira execução), não faz nada
-        pass    
+        pass
 
 #Função para calcular valores das horas extras de acordo com o salario
 def calcular_valores_horas():
